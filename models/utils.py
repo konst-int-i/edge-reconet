@@ -1,5 +1,5 @@
 
 def save_model(quantised, name='style_transfer.tflite'):
-    with open('saved_models/name', 'wb') as f:
+    with open(f'saved_models/{name}', 'wb') as f:
         f.write(quantised)
 
