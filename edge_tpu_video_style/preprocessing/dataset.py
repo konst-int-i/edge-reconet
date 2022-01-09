@@ -6,6 +6,8 @@ from PIL import Image
 from skimage import transform
 import torch
 import os
+from collections import Generator
+from tensorflow.keras.utils import Sequence
 
 # from collections import abc
 
@@ -27,24 +29,30 @@ class MPIDataSet:
             self.numlist.append(
                 len(os.listdir(self.path.joinpath("clean").joinpath(folder)))
             )
+        self.idx = 0
 
     def __len__(self):
         return sum(self.numlist) - len(self.numlist)
 
-    def __getitem__(self, idx):
+    def __iter__(self):
+        return self
+
+    # def __getitem__(self, idx):
+    def __next__(self):
 
         """
         idx must be between 0 to len-1
         assuming flow[0] contains flow in x direction and flow[1] contains flow in y
         """
+        self.idx += 1
         for i in range(0, len(self.numlist)):
             folder = self.dirlist[i]
             path = self.path.joinpath("clean").joinpath(folder)
             occpath = self.path.joinpath("occlusions").joinpath(folder)
             flowpath = self.path.joinpath("flow").joinpath(folder)
-            if idx < (self.numlist[i] - 1):
-                num1 = toString(idx + 1)
-                num2 = toString(idx + 2)
+            if self.idx < (self.numlist[i] - 1):
+                num1 = toString(self.idx + 1)
+                num2 = toString(self.idx + 2)
 
                 img1 = Image.open(path.joinpath(f"frame_{num1}.png")).resize(
                     (self.args.width, self.args.height), Image.BILINEAR
@@ -87,9 +95,13 @@ class MPIDataSet:
                 mask = tf.convert_to_tensor(mask)
                 mask = tf.expand_dims(mask, axis=0)
                 break
-            idx -= self.numlist[i] - 1
-        # IMG2 should be at t in IMG1 is at T-1
+            self.idx -= self.numlist[i] - 1
+            # IMG2 should be at t in IMG1 is at T-1
+
         return (img1, img2, mask, flow)
+
+    def __call__(self, *args, **kwargs):
+        return self
 
 
 def toString(num):
