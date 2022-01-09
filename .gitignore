@@ -134,3 +134,6 @@ saved_models/*
 
 # VIM
 *.swp
+
+# VS Code
+.DS_Store
