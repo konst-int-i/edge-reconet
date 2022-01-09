@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Tensorflow
+*.tflite
+saved_models/*
+
+# VIM
+*.swp
