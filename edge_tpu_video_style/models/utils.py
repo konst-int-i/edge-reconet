@@ -1,12 +1,14 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
 
+from typing import Tuple
+
 def save_model(quantised, name='style_transfer.tflite'):
     with open(f'saved_models/{name}', 'wb') as f:
         f.write(quantised)
 
 
-def warp_back(image: tf.Tensor, flow: tf.Tensor) -> tf.Tensor:
+def warp_back(image: tf.Tensor, flow: tf.Tensor) -> Tuple[tf.Tensor]:
     """Calculates the inverse warping from frame t to frame t - 1
     TODO: Test this method!
 
@@ -30,8 +32,8 @@ def warp_back(image: tf.Tensor, flow: tf.Tensor) -> tf.Tensor:
     assert query_points_on_grid.shape[3] == 2, f"Wrong size grid, {query_points_on_grid.shape}"
 
     # Scale back to [-1, 1]
-    query_points_on_grid = query_points_on_grid[:, :, :, 0] / tf.max(width-1, 1)-1.0
-    query_points_on_grid = query_points_on_grid[:, :, :, 1] / tf.max(height-1, 1)-1.0
+    query_points_on_grid = query_points_on_grid[:, :, :, 0] / tf.math.maximum(width-1, 1)-1.0
+    query_points_on_grid = query_points_on_grid[:, :, :, 1] / tf.math.maximum(height-1, 1)-1.0
 
     query_points_flattened = tf.reshape(
         query_points_on_grid, [batch_size, height * width, 2]
@@ -51,7 +53,7 @@ def warp_back(image: tf.Tensor, flow: tf.Tensor) -> tf.Tensor:
 
 # weightings from paper get_mask_2
 
-def _get_luminance_grayscale(image, *luminance_coefs):
+def _get_luminance_grayscale(image: tf.Tensor, *luminance_coefs) -> tf.Tensor:
     assert len(luminance_coefs) == 3
     r_coef, g_coef, b_coef = luminance_coefs
 
