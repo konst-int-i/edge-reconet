@@ -19,12 +19,12 @@ def resblock(x, kernelsize, filters):
     return out
 
 
-def conv_instnorm_relu(x, filters, kernel_size, padding='same', strides=(1, 1)):
+def conv_instnorm_relu(x, filters, kernel_size, padding="same", strides=(1, 1)):
     x = layers.Conv2D(filters, kernel_size, strides=strides, padding=padding)(x)
     x = instance_normalisation(x)
     x = activations.relu(x)
     return x
-    
+
 
 def instance_normalisation(x):
     mean = tf.math.reduce_mean(x, axis=(1, 2))
@@ -36,9 +36,9 @@ def instance_normalisation(x):
 def build_reconet() -> tf.keras.Model:
     encoder_input = keras.Input(shape=(32, 32, 3), name="original_img")
     x = conv_instnorm_relu(encoder_input, 32, 9)
-    x = layers.Conv2D(64, 3, padding='same', strides=(1, 1), activation="relu")(x)
+    x = layers.Conv2D(64, 3, padding="same", strides=(1, 1), activation="relu")(x)
     x = conv_instnorm_relu(x, 32, 3)
-    
+
     x = resblock(x, 3, 32)
     x = resblock(x, 3, 32)
     x = resblock(x, 3, 32)
