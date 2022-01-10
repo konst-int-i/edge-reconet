@@ -9,7 +9,6 @@ def save_model(quantised, name='style_transfer.tflite'):
         f.write(quantised)
 
 
-
 def warp_back(image: tf.Tensor, flow: tf.Tensor) -> Tuple[tf.Tensor]:
     """Calculates the inverse warping from frame t to frame t - 1
     TODO: Test this method!
@@ -91,8 +90,8 @@ def calculate_luminance_mask(current_im: tf.Tensor, previous_im: tf.Tensor, mask
     image_luminance = _get_luminance_grayscale(current_im, red_coef, green_coef, blue_coef)
     previous_luminance = _get_luminance_grayscale(previous_im, red_coef, green_coef, blue_coef)
 
-    image_luminance = tf.expand_dims(image_luminance, axis=0)
-    previous_luminance = tf.expand_dims(previous_luminance, axis=0)
+    image_luminance = tf.expand_dims(image_luminance, axis=-1)
+    previous_luminance = tf.expand_dims(previous_luminance, axis=-1)
 
     counter_mask = tf.abs(image_luminance - previous_luminance)
 
@@ -108,6 +107,6 @@ if __name__ == "__main__":
     flow = tf.random.uniform(minval=0, maxval=1, shape=(1, 128, 128, 2))
 
     warp, mask = warp_back(im, flow)
-    lume = calculate_luminance_mask(im, im, tf.random.uniform((1, 128, 128, 1), maxval=0, minval=1))
+    lume = calculate_luminance_mask(im, im, mask)
 
     print(f"{warp.shape=}, {mask.shape=}, {lume.shape=}")
