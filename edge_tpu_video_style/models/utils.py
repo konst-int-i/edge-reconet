@@ -1,5 +1,8 @@
+from re import I
 import tensorflow as tf
 import tensorflow_addons as tfa
+
+from typing import Tuple
 
 
 def save_model(quantised, name="style_transfer.tflite"):
@@ -7,7 +10,7 @@ def save_model(quantised, name="style_transfer.tflite"):
         f.write(quantised)
 
 
-def warp_back(image: tf.Tensor, flow: tf.Tensor) -> tf.Tensor:
+def warp_back(image: tf.Tensor, flow: tf.Tensor) -> Tuple[tf.Tensor]:
     """Calculates the inverse warping from frame t to frame t - 1
     TODO: Test this method!
 
@@ -33,10 +36,13 @@ def warp_back(image: tf.Tensor, flow: tf.Tensor) -> tf.Tensor:
     ), f"Wrong size grid, {query_points_on_grid.shape}"
 
     # Scale back to [-1, 1]
-    query_points_on_grid = query_points_on_grid[:, :, :, 0] / tf.max(width - 1, 1) - 1.0
-    query_points_on_grid = (
-        query_points_on_grid[:, :, :, 1] / tf.max(height - 1, 1) - 1.0
-    )
+    print(query_points_on_grid.shape)
+
+    width_mult = max(width - 2.0, 0.0)
+    height_mult = max(height - 2.0, 0.0)
+    multiplier = tf.constant([width_mult, height_mult], dtype=tf.float32)
+
+    query_points_on_grid /= multiplier
 
     query_points_flattened = tf.reshape(
         query_points_on_grid, [batch_size, height * width, 2]
@@ -49,7 +55,7 @@ def warp_back(image: tf.Tensor, flow: tf.Tensor) -> tf.Tensor:
 
     mask = tfa.image.interpolate_bilinear(tf.ones(image.shape), query_points_flattened)
     mask = tf.reshape(mask, [batch_size, height, width, channels])
-    mask = tf.where(mask < 0.9999, 0, 1)
+    mask = tf.where(mask < 0.9999, 0.0, 1.0)
 
     return interpolated * mask, mask
 
@@ -57,7 +63,7 @@ def warp_back(image: tf.Tensor, flow: tf.Tensor) -> tf.Tensor:
 # weightings from paper get_mask_2
 
 
-def _get_luminance_grayscale(image, *luminance_coefs):
+def _get_luminance_grayscale(image: tf.Tensor, *luminance_coefs) -> tf.Tensor:
     assert len(luminance_coefs) == 3
     r_coef, g_coef, b_coef = luminance_coefs
 
@@ -96,13 +102,25 @@ def calculate_luminance_mask(
         previous_im, red_coef, green_coef, blue_coef
     )
 
-    image_luminance = tf.expand_dims(image_luminance)
-    previous_luminance = tf.expand_dims(previous_luminance)
+    image_luminance = tf.expand_dims(image_luminance, axis=0)
+    previous_luminance = tf.expand_dims(previous_luminance, axis=0)
 
     counter_mask = tf.abs(image_luminance - previous_luminance)
 
-    counter_mask = tf.where(counter_mask < 0.05, 0, 1)
+    counter_mask = tf.where(counter_mask < 0.05, 0.0, 1.0)
     counter_mask = mask - counter_mask
-    counter_mask = tf.where(counter_mask < 0, 0, 1)
+    counter_mask = tf.where(counter_mask < 0, 0.0, 1.0)
 
     return counter_mask
+
+
+if __name__ == "__main__":
+    im = tf.random.uniform(minval=0, maxval=1, shape=(1, 128, 128, 3))
+    flow = tf.random.uniform(minval=0, maxval=1, shape=(1, 128, 128, 2))
+
+    warp, mask = warp_back(im, flow)
+    lume = calculate_luminance_mask(
+        im, im, tf.random.uniform((1, 128, 128, 1), maxval=0, minval=1)
+    )
+
+    print(f"{warp.shape=}, {mask.shape=}, {lume.shape=}")
