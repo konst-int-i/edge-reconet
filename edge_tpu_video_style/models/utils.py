@@ -73,7 +73,7 @@ def calculate_luminance_mask(current_im: tf.Tensor, previous_im: tf.Tensor, mask
         mask (tf.Tensor): Occlusion mask
 
     Returns:
-        tf.Tensor: [description]
+        tf.Tensor: The mask of unchanged places of the current and previous frames
     """
     red_coef = 0.2126
     green_coef = 0.7152
