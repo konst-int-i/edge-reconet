@@ -19,6 +19,11 @@ import tensorflow_addons as tfa
 import tensorflow as tf
 
 from timeit import default_timer as timer
+from dataclasses import dataclass
+from typing import Iterable
+
+from models.losses import temporal_feature_loss
+
 
 
 def build_toy_model():
@@ -84,7 +89,7 @@ def train(
 
             feat1_warp, mask_boundary_feat1 = warp_back(feat1, feat1_flow)
             # temp_feature_loss = mse_loss(feat2, feat1_warp)
-            temp_feature_loss = calc_temp_feature_loss(feat1_warp, feat2)
+            temp_feature_loss = temporal_feature_loss(feat1_warp, feat2)
 
             print(f"feat2 shape: ", feat2.get_shape())
             print(f"feat1_flow shape: ", feat1_flow.get_shape())
@@ -108,9 +113,6 @@ def train(
 
             # return temporary_feature_loss
 
-
-def calc_temp_feature_loss(feat1_warp, feat2):
-    return tf.square(feat2 - feat1_warp)
 
 
 if __name__ == "__main__":

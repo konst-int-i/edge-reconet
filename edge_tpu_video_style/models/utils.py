@@ -63,7 +63,7 @@ def warp_back(image: tf.Tensor, flow: tf.Tensor) -> Tuple[tf.Tensor]:
 # weightings from paper get_mask_2
 
 
-def _get_luminance_grayscale(image: tf.Tensor, *luminance_coefs) -> tf.Tensor:
+def get_luminance_grayscale(image: tf.Tensor, *luminance_coefs) -> tf.Tensor:
     assert len(luminance_coefs) == 3
     r_coef, g_coef, b_coef = luminance_coefs
 
@@ -95,10 +95,10 @@ def calculate_luminance_mask(
     green_coef = 0.7152
     blue_coef = 0.0722
 
-    image_luminance = _get_luminance_grayscale(
+    image_luminance = get_luminance_grayscale(
         current_im, red_coef, green_coef, blue_coef
     )
-    previous_luminance = _get_luminance_grayscale(
+    previous_luminance = get_luminance_grayscale(
         previous_im, red_coef, green_coef, blue_coef
     )
 
