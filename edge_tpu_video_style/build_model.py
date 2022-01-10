@@ -5,6 +5,7 @@ from models.utils import save_model, warp_back, calculate_luminance_mask
 from postprocessing.quantisation import quantise_model
 from edge_tpu_video_style.utils.parser import parser
 from models.layers import ReCoNet
+from models.losses import *
 from models.layers import Normalization
 from preprocessing.dataset import MPIDataSet
 from PIL import Image
@@ -23,7 +24,6 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from models.losses import temporal_feature_loss
-
 
 
 def build_toy_model():
@@ -72,47 +72,72 @@ def train(
             print(id)
             if id == 2:
                 break
-            img1, img2, mask, flow = sample
-            img1, img2 = img2, img1
+            img_previous, img_current, mask, flow = sample
+            # optical flow in dataset is opposite
+            img_current, img_previous = img_previous, img_current
 
-            img1_warp, mask_boundary_img1 = warp_back(img1, flow)
-            mask2 = calculate_luminance_mask(img1_warp, img2, mask)
-
-            feat1, output_img1 = style_model(img1)
-            feat2, output_img2 = style_model(img2)
-
-            # Calculate flow and mask for feature 1
-            resize_size = (feat1.get_shape()[1], feat1.get_shape()[2])
-            print(f"resizing to {resize_size}")
-            feat1_flow = tf.image.resize(images=flow, size=resize_size)
-            feat1_mask = tf.image.resize(images=mask, size=resize_size)
-
-            feat1_warp, mask_boundary_feat1 = warp_back(feat1, feat1_flow)
-            # temp_feature_loss = mse_loss(feat2, feat1_warp)
-            temp_feature_loss = temporal_feature_loss(feat1_warp, feat2)
-
-            print(f"feat2 shape: ", feat2.get_shape())
-            print(f"feat1_flow shape: ", feat1_flow.get_shape())
-            print(f"feat1_warp_shape: ", feat1_warp.get_shape())
-            print(f"Mask boundary_img1: ", mask_boundary_img1.get_shape())
-            print(f"Temp Feature loss shape: ", temp_feature_loss.get_shape())
-            #
-            feat1_mask = calculate_luminance_mask(feat1_warp, feat2, feat1_mask)
-
-            # calculate temporal feature loss
-            total_dims = tf.size(feat2, out_type=tf.float32)
-            temp_feature_loss = (
-                tf.math.reduce_sum(
-                    [temp_feature_loss * feat1_mask * mask_boundary_feat1]
-                )
-                / total_dims
+            current_inverse_warp, transition_mask_boundary = warp_back(
+                img_current, flow
+            )
+            luminance_mask = calculate_luminance_mask(
+                current_inverse_warp, img_current, mask
             )
 
-            print("Mask feat 1: ", feat1_mask.get_shape())
-            print(temp_feature_loss)
+            feat_previous, output_img_previous = style_model(img_previous)
+            feat_current, output_img_current = style_model(img_current)
 
-            # return temporary_feature_loss
+            # Calculate flow and mask for feature 1
+            resize_size = (feat_previous.get_shape()[1], feat_previous.get_shape()[2])
+            print(f"resizing to {resize_size}")
+            feat_previous_flow = tf.image.resize(images=flow, size=resize_size)
+            feat_previous_mask = tf.image.resize(images=mask, size=resize_size)
 
+            feat_previous_inv_warp, feat_previous_mask_boundary = warp_back(
+                feat_previous, feat_previous_flow
+            )
+            # temp_feature_loss = temporal_feature_loss(feat_previous_warp, feat_current)
+
+            # ReCoNetLoss()
+            print(f"feat2 shape: ", feat_current.get_shape())
+            print(f"feat1_flow shape: ", feat_previous_flow.get_shape())
+            print(f"feat1_warp_shape: ", feat_previous_inv_warp.get_shape())
+            print(f"Mask boundary_img1: ", transition_mask_boundary.get_shape())
+            feat_previous_mask = calculate_luminance_mask(
+                feat_previous_inv_warp, feat_current, feat_previous_mask
+            )
+
+            # temporal feature loss
+            temp_feature_loss = feature_temporal_loss(
+                current_feature_maps=feat_current,
+                previous_feature_maps=feat_previous,
+                reverse_optical_flow=feat_previous_flow,
+                occlusion_mask=feat_previous_mask,
+            )
+            print("Temporal feature loss", temp_feature_loss)
+
+            # get output temporal loss
+            # temp_ouptput_loss = output_temporal_loss(
+            #     current_input_frame=img_current,
+            #     previous_input_frame=img_previous,
+            #     current_output_frame=output_img_current,
+            #     previous_output_frame=output_img_previous,
+            #     reverse_optical_flow=flow,
+            #     occlusion_mask=mask
+            # )
+            # print("Temporal output loss", temp_ouptput_loss)
+
+            # get content feature maps
+            # normalize
+            img_current_norm = normalization(output_img_current)
+            img_previous_norm = normalization(output_img_previous)
+
+            # pass through vgg
+            # vgg_output_current = loss_model(img_current_norm)
+            # vgg_output_previous = loss_model(img_previous_norm)
+
+            # print(vgg_output_current.get_shape())
+            # print(vgg_output_previous.get_shape())
+            # vgg_input_current =
 
 
 if __name__ == "__main__":

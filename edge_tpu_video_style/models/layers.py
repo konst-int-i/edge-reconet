@@ -10,10 +10,10 @@ import tensorflow_addons as tfa
 class Normalization(tf.Module):
     def __init__(self, mean, std):
         super(Normalization, self).__init__()
-        self.mean = tf.reshape(mean, (-1, 1, 1))
-        self.std = tf.reshape(std, (-1, 1, 1))
+        self.mean = tf.reshape(mean, (1, 1, -1))
+        self.std = tf.reshape(std, (1, 1, -1))
 
-    def forward(self, img):
+    def __call__(self, img):
         return (img - self.mean) / self.std
 
 
@@ -89,7 +89,7 @@ class ReCoNet(tf.Module):
         for _ in range(5):
             x = self.residual_block(x)
 
-        feat = x
+        feat_map = x
 
         # for _ in range(2):
         x = self.upsample(x)
@@ -97,9 +97,9 @@ class ReCoNet(tf.Module):
         x = self.upsample(x)
         x = self.conv_inst_relu_dev2(x)
         x = self.activation_conv(x)
-        x = self.tanh(x)
+        image_output = self.tanh(x)
 
-        return feat, x
+        return feat_map, image_output
 
 
 if __name__ == "__main__":

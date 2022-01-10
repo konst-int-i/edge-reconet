@@ -93,7 +93,7 @@ class MPIDataSet:
                 # now convert to tensor
                 mask = tf.convert_to_tensor(mask)
                 mask = tf.expand_dims(mask, axis=0)
-                mask = tf.transpose(mask, (2, 1, 0))
+                mask = tf.transpose(mask, (1, 2, 0))
                 break
             self.idx -= self.numlist[i] - 1
             # IMG2 should be at t in IMG1 is at T-1
