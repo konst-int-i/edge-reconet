@@ -65,24 +65,23 @@ class MPIDataSet:
                 )
                 flow = read(flowpath.joinpath(f"frame_{num1}.flo"))
 
-                img1 = tf.convert_to_tensor(img1)
-                img1 = tf.transpose(img1, (2, 0, 1))
-                img2 = tf.convert_to_tensor(img2)
-                img2 = tf.transpose(img2, (2, 0, 1))
+                img1 = tf.convert_to_tensor(img1, dtype=tf.float32)
+                # img1 = tf.transpose(img1, (2, 0, 1))
+                img2 = tf.convert_to_tensor(img2, dtype=tf.float32)
+                # img2 = tf.transpose(img2, (2, 0, 1))
                 h, w, c = flow.shape
                 flow = (
                     torch.from_numpy(
                         transform.resize(flow, (self.args.height, self.args.width))
                     )
-                    .permute(2, 0, 1)
-                    .float()
-                    .numpy()
+                    # .permute(2, 0, 1)
+                    .float().numpy()
                 )
                 # TODO - getting different dims when using numpy
                 # flow = np.transpose(flow, (2, 0, 1))
                 flow[0, :, :] *= float(flow.shape[1] / h)
                 flow[1, :, :] *= float(flow.shape[2] / w)
-                flow = tf.convert_to_tensor(flow)
+                flow = tf.convert_to_tensor(flow, dtype=tf.float32)
                 # flow = tf.convert_to_tensor(transform.resize(flow, (self.args.height, self.args.width)))
 
                 ##take no occluded regions to compute
@@ -94,6 +93,7 @@ class MPIDataSet:
                 # now convert to tensor
                 mask = tf.convert_to_tensor(mask)
                 mask = tf.expand_dims(mask, axis=0)
+                mask = tf.transpose(mask, (2, 1, 0))
                 break
             self.idx -= self.numlist[i] - 1
             # IMG2 should be at t in IMG1 is at T-1
