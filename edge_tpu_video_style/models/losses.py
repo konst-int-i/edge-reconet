@@ -21,20 +21,29 @@ class ReCoNetLoss:
     _output_temporal_loss:   float = 0.
     _total_variation:        float = 0.
 
-    def __call__(
-        self,
-        current_vgg_out: tf.Tensor,
-        current_vgg_in: tf.Tensor,
-        previous_vgg_out: tf.Tensor,
-        style_gram_matrices: Iterable[tf.Tensor],
-        current_output_frame: tf.Tensor,
-        previous_output_frame: tf.Tensor,
-        current_input_frame: tf.Tensor,
-        previous_input_frame: tf.Tensor,
-        current_feature_maps: tf.Tensor,
-        previous_feature_maps: tf.Tensor,
-        reverse_optical_flow: tf.Tensor,
-        occlusion_mask: tf.Tensor) -> float:
+    def __call__(self, current_vgg_out, current_vgg_in, previous_vgg_out,
+        style_gram_matrices, current_output_frame, previous_output_frame,
+        current_input_frame, previous_input_frame, current_feature_maps,
+        previous_feature_maps, reverse_optical_flow, occlusion_mask) -> float:
+        """Calculate the full loss for the ReCoNet model
+
+        Args:
+            current_vgg_out (tf.Tensor): The vgg output for the current frame
+            current_vgg_in (tf.Tensor): The vgg input for the current frame
+            previous_vgg_out (tf.Tensor): The vgg output for the previous frame
+            style_gram_matrices (Iterable[tf.Tensor]): A list of style gram matricies
+            current_output_frame (tf.Tensor): The current output frame of the ReCoNet model
+            previous_output_frame (tf.Tensor): The previous output frame of the ReCoNet model
+            current_input_frame (tf.Tensor): The current input frame of the ReCoNet model
+            previous_input_frame (tf.Tensor): The previous input frame of the ReCoNet model
+            current_feature_maps (tf.Tensor): The current feature maps from the ReCoNet encoder
+            previous_feature_maps (tf.Tensor): The previous feature maps from the ReCoNet encoder
+            reverse_optical_flow (tf.Tensor): The optical flow from frame t to frame t - 1
+            occlusion_mask (tf.Tensor): The occlusion mask
+
+        Returns:
+            float: The loss for the reconet model
+        """
 
         content_loss_ = self.alpha * content_loss(current_vgg_out[2], current_vgg_in[2]) \
                       + self.alpha * content_loss(previous_vgg_out[2], current_vgg_out[2])
