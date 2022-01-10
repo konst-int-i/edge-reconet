@@ -68,8 +68,8 @@ def calculate_luminance_mask(current_im: tf.Tensor, previous_im: tf.Tensor, mask
     TODO: Test this method!
 
     Args:
-        current_im (tf.Tensor): Optical flow current_im
-        previous_im (tf.Tensor): The previous current_im
+        current_im (tf.Tensor): The current image
+        previous_im (tf.Tensor): The previous image
         mask (tf.Tensor): Occlusion mask
 
     Returns:
