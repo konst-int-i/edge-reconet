@@ -5,8 +5,8 @@ from tensorflow.keras import activations
 
 from timeit import default_timer as timer
 
-from edge_tpu_video_style.models.utils import save_model
-from edge_tpu_video_style.postprocessing.quantisation import quantise_model
+from models.utils import save_model
+from postprocessing.quantisation import quantise_model
 
 
 def resblock(x, kernelsize, filters):
