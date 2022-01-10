@@ -71,8 +71,7 @@ def train(
             img1, img2 = img2, img1
 
             img1_warp, mask_boundary_img1 = warp_back(img1, flow)
-            # mask2 = calculate_luminance_mask(img1_warp, img2, mask)
-            # TODO - mask_boundary_1, mask2
+            mask2 = calculate_luminance_mask(img1_warp, img2, mask)
 
             feat1, output_img1 = style_model(img1)
             feat2, output_img2 = style_model(img2)
@@ -83,21 +82,35 @@ def train(
             feat1_flow = tf.image.resize(images=flow, size=resize_size)
             feat1_mask = tf.image.resize(images=mask, size=resize_size)
 
-            # feat1_warp = tfa.image.dense_image_warp(
-            #     feat1, feat1_flow
-            # )  # TODO - replace with final routine
-            feat1_warp, mask_boundary_img1 = warp_back(feat1, feat1_flow)
-            temp_feature_loss = mse_loss(feat2, feat1_warp)
+            feat1_warp, mask_boundary_feat1 = warp_back(feat1, feat1_flow)
+            # temp_feature_loss = mse_loss(feat2, feat1_warp)
+            temp_feature_loss = calc_temp_feature_loss(feat1_warp, feat2)
+
             print(f"feat2 shape: ", feat2.get_shape())
-            print(f"feat1_warp shape: ", feat1_warp.get_shape())
+            print(f"feat1_flow shape: ", feat1_flow.get_shape())
+            print(f"feat1_warp_shape: ", feat1_warp.get_shape())
+            print(f"Mask boundary_img1: ", mask_boundary_img1.get_shape())
             print(f"Temp Feature loss shape: ", temp_feature_loss.get_shape())
             #
-            # # mastk_feat1 = get_mask() # TODO - implement this
+            feat1_mask = calculate_luminance_mask(feat1_warp, feat2, feat1_mask)
 
-            # temp_feature_loss
-            # temp_feature_loss = sum_mse_loss(feat2, feat1) # TODO - change to feat_1_warp
+            # calculate temporal feature loss
+            total_dims = tf.size(feat2, out_type=tf.float32)
+            temp_feature_loss = (
+                tf.math.reduce_sum(
+                    [temp_feature_loss * feat1_mask * mask_boundary_feat1]
+                )
+                / total_dims
+            )
+
+            print("Mask feat 1: ", feat1_mask.get_shape())
+            print(temp_feature_loss)
 
             # return temporary_feature_loss
+
+
+def calc_temp_feature_loss(feat1_warp, feat2):
+    return tf.square(feat2 - feat1_warp)
 
 
 if __name__ == "__main__":
@@ -118,10 +131,13 @@ if __name__ == "__main__":
     style_model = ReCoNet()
     # loss_model = VGG16(weights="imagenet", classifier_activation=)
     loss_model = VGG16()
+    from keras.utils import losses_utils
 
     # mse_loss = losses.MeanSquaredError(reduction=losses.Reduction.SUM_OVER_BATCH_SIZE, name="mse")
     sum_mse_loss = losses.MeanSquaredError(reduction="sum_over_batch_size", name="mse")
-    mse_loss = losses.MeanSquaredError(reduction="none", name="summed_mse")
+    mse_loss = losses.MeanSquaredError(
+        reduction=losses_utils.ReductionV2.NONE, name="summed_mse"
+    )
     optimizer = optimizers.Adamax(learning_rate=args.lr)
 
     train_data = MPIDataSet(Path(args.path).joinpath("training"), args)
