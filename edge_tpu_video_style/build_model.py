@@ -1,7 +1,7 @@
 import argparse
 import os
 from models.reconet import build_reconet
-from models.utils import save_model
+from models.utils import save_model, warp_back, calculate_luminance_mask
 from postprocessing.quantisation import quantise_model
 from edge_tpu_video_style.utils.parser import parser
 from models.layers import ReCoNet
@@ -67,31 +67,34 @@ def train(
             print(id)
             if id == 2:
                 break
-            # (img1, img2, mask, flow) = sample
             img1, img2, mask, flow = sample
             img1, img2 = img2, img1
 
-            img1_warp = tfa.image.dense_image_warp(img1, flow)
-            # TODO - mask_boundary_1, mask2
+            # img1_warp = tfa.image.dense_image_warp(img1, flow)
+            img1_warp, mask_boundary_img1 = warp_back(img1, flow)
+            mask2 = calculate_luminance_mask(img1_warp, img2, mask)
+            TODO - mask_boundary_1, mask2
 
             feat1, output_img1 = style_model(img1)
             feat2, output_img2 = style_model(img2)
 
             # Calculate flow and mask for feature 1
-            feat1_flow = layers.UpSampling2D(
-                size=(feat1.get_shape()[1], feat1.get_shape()[2]), mode="bilinear"
-            )(flow)
-            feat1_mask = layers.UpSampling2D(
-                size=(feat1.get_shape()[1], feat1.get_shape()[2]), mode="bilinear"
-            )(mask)
+            resize_size = (feat1.get_shape()[1], feat1.get_shape()[2])
+            print(f"resizing to {resize_size}")
+            feat1_flow = tf.image.resize(images=flow, size=resize_size)
+            feat1_mask = tf.image.resize(images=mask, size=resize_size)
 
-            feat1_warp = tfa.image.dense_image_warp(
-                feat1, feat1_flow
-            )  # TODO - replace with final routine
-            feature_temp_loss = sum_mse_loss(feat2, feat1_warp)
+            # feat1_warp = tfa.image.dense_image_warp(
+            #     feat1, feat1_flow
+            # )  # TODO - replace with final routine
+            # temp_feature_loss = sum_mse_loss(feat2, feat1_warp)
+            #
+            # # mastk_feat1 = get_mask() # TODO - implement this
 
-            # mastk_feat1 = get_mask() # TODO - implement this
-            temp_feature_loss
+            # temp_feature_loss
+            # temp_feature_loss = sum_mse_loss(feat2, feat1) # TODO - change to feat_1_warp
+
+            # return temporary_feature_loss
 
 
 if __name__ == "__main__":
@@ -113,8 +116,9 @@ if __name__ == "__main__":
     # loss_model = VGG16(weights="imagenet", classifier_activation=)
     loss_model = VGG16()
 
-    mse_loss = losses.MSE(reduction=losses.Reduction.SUM_OVER_BATCH_SIZE, name="mse")
-    sum_mse_loss = losses.MSE(reduction=None, name="summed_mse")
+    # mse_loss = losses.MeanSquaredError(reduction=losses.Reduction.SUM_OVER_BATCH_SIZE, name="mse")
+    sum_mse_loss = losses.MeanSquaredError(reduction="sum_over_batch_size", name="mse")
+    mse_loss = losses.MeanSquaredError(reduction="none", name="summed_mse")
     optimizer = optimizers.Adamax(learning_rate=args.lr)
 
     train_data = MPIDataSet(Path(args.path).joinpath("training"), args)
@@ -137,7 +141,7 @@ if __name__ == "__main__":
     train(
         args=args,
         train_dataset=train_dataset,
-        test_dataset=test_dataset,
+        # test_dataset=test_dataset,
         loss_model=loss_model,
         mse_loss=mse_loss,
         sum_mse_loss=sum_mse_loss,
