@@ -70,10 +70,9 @@ def train(
             img1, img2, mask, flow = sample
             img1, img2 = img2, img1
 
-            # img1_warp = tfa.image.dense_image_warp(img1, flow)
             img1_warp, mask_boundary_img1 = warp_back(img1, flow)
-            mask2 = calculate_luminance_mask(img1_warp, img2, mask)
-            TODO - mask_boundary_1, mask2
+            # mask2 = calculate_luminance_mask(img1_warp, img2, mask)
+            # TODO - mask_boundary_1, mask2
 
             feat1, output_img1 = style_model(img1)
             feat2, output_img2 = style_model(img2)
@@ -87,7 +86,11 @@ def train(
             # feat1_warp = tfa.image.dense_image_warp(
             #     feat1, feat1_flow
             # )  # TODO - replace with final routine
-            # temp_feature_loss = sum_mse_loss(feat2, feat1_warp)
+            feat1_warp, mask_boundary_img1 = warp_back(feat1, feat1_flow)
+            temp_feature_loss = mse_loss(feat2, feat1_warp)
+            print(f"feat2 shape: ", feat2.get_shape())
+            print(f"feat1_warp shape: ", feat1_warp.get_shape())
+            print(f"Temp Feature loss shape: ", temp_feature_loss.get_shape())
             #
             # # mastk_feat1 = get_mask() # TODO - implement this
 
