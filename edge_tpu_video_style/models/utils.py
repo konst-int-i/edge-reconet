@@ -65,6 +65,7 @@ def _get_luminance_grayscale(image, *luminance_coefs):
 def get_mask(current_im: tf.Tensor, previous_im: tf.Tensor, mask: tf.Tensor) -> tf.Tensor:
     """Get a mask to retain the unchanged places of the current and previous frames,
     the mask preserves still pixels while occluding changed ones
+    TODO: Test this method!
 
     Args:
         current_im (tf.Tensor): Optical flow current_im
@@ -74,9 +75,9 @@ def get_mask(current_im: tf.Tensor, previous_im: tf.Tensor, mask: tf.Tensor) -> 
     Returns:
         tf.Tensor: [description]
     """
-    red_coef = ...
-    green_coef = ...
-    blue_coef = ...
+    red_coef = 0.2126
+    green_coef = 0.7152
+    blue_coef = 0.0722
 
     image_luminance = _get_luminance_grayscale(current_im, red_coef, green_coef, blue_coef)
     previous_luminance = _get_luminance_grayscale(previous_im, red_coef, green_coef, blue_coef)
