@@ -155,11 +155,13 @@ def feature_temporal_loss(
         images=reverse_optical_flow, size=(w, h)
     )
     occlusion_mask_resized = tf.image.resize(images=occlusion_mask, size=(w, h))
-    warp_previous, _ = warp_back(previous_feature_maps, reverse_optical_flow_resized)
-    feature_maps_diff = current_feature_maps - warp_previous
-    loss = tf.reduce_sum(tf.square(occlusion_mask_resized * feature_maps_diff)) / (
-        c * h * w
+    warp_previous, warp_mask = warp_back(
+        previous_feature_maps, reverse_optical_flow_resized
     )
+    feature_maps_diff = current_feature_maps - warp_previous
+    loss = tf.reduce_sum(
+        tf.square(occlusion_mask_resized * feature_maps_diff * warp_mask)
+    ) / (c * h * w)
     return loss
 
 

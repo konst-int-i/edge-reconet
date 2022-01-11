@@ -58,9 +58,11 @@ class MPIDataSet:
                     (self.args.width, self.args.height), Image.BILINEAR
                 )
                 mask = Image.open(occpath.joinpath(f"frame_{num1}.png")).resize(
-                    (self.args.width, self.args.height), Image.NONE
+                    (self.args.width, self.args.height), Image.BILINEAR
                 )  # note: changed from bilinear interpolation
-                # flow = read(flowpath.joinpath(f"frame_{num1}.flo"))
+
+                print(f"0{mask=}")
+
                 flow = readFlow(str(flowpath.joinpath(f"frame_{num1}.flo")))
 
                 img1 = tf.convert_to_tensor(img1, dtype=tf.float32) / float_conv_factor
@@ -81,21 +83,19 @@ class MPIDataSet:
 
                 ##take no occluded regions to compute
                 # need to convert to numpy array first
-                mask = np.asarray(mask)
+
+                mask = np.asarray(mask) / 255
+                print(f"1{mask=}")
                 mask = 1 - mask
-                mask[mask < 0.99] = 0
-                mask[mask > 0] = 1
+                mask = np.where((mask < 0.99), 0.0, 1.0)
                 # now convert to tensor
-                mask = tf.convert_to_tensor(mask)
+                mask = tf.convert_to_tensor(mask, dtype=tf.float32)
                 mask = tf.expand_dims(mask, axis=0)
                 mask = tf.transpose(mask, (2, 1, 0))
+                print(f"5{mask=}")
                 break
             self.idx -= self.numlist[i] - 1
             # IMG2 should be at t in IMG1 is at T-1
-        # print(f"{img1.shape=}")
-        # print(f"{img2.shape=}")
-        # print(f"{mask.shape=}")
-        # print(f"{flow.shape=}")
         return (img1, img2, flow, mask)
 
     def __call__(self, *args, **kwargs):

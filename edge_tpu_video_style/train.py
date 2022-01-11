@@ -141,8 +141,8 @@ def train_loop(args, train_data, optimizer, style, reconet, vgg):
                 break
 
             gradients = train_step(vars(args), sample, style, reconet, vgg)
-            print(gradients)
-            # optimizer.apply_gradients()
+            # print(gradients)
+            optimizer.apply_gradients(gradients)
 
 
 def main():
@@ -175,8 +175,6 @@ def main():
 
     reconet = ReCoNet()
     vgg = vgg_layers()
-
-    # args.ALPHA, args.BETA, args.GAMMA, args.LAMBDA_F, args.LAMBDA_O = 1, 1, 1, 1, 1
 
     # sample = (im1, im2, flow, mask)
     # train_step(sample, style, reconet, vgg, args)
