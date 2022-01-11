@@ -91,13 +91,13 @@ class ReCoNetLoss:
         self._feature_temporal_loss = feature_temporal_loss_
         self._output_temporal_loss = output_temporal_loss_
 
-        return sum(
+        return sum([
             content_loss_,
             style_loss_,
             total_variation_,
             feature_temporal_loss_,
             output_temporal_loss_,
-        )
+        ])
 
     def __repr__(self):
         loss_str = f"""{self._content_loss=}, 
@@ -121,28 +121,28 @@ def temporal_feature_loss(feat1_warp, feat2):
 
 
 def content_loss(content_feature_maps, style_feature_maps):
-    # b, w, h, c = content_feature_maps.shape
-    w, h, c = content_feature_maps.shape
+    b, w, h, c = content_feature_maps.shape
+    # w, h, c = content_feature_maps.shape
     return tf.reduce_sum(tf.square(content_feature_maps - style_feature_maps)) / (
         c * w * h
     )
 
 
 def style_loss(content_feature_maps, style_gram_matrices):
-    return tf.reduce_sum(
-        (tf.square(gram_matrix(content) - style))
-        for content, style in zip(content_feature_maps, style_gram_matrices)
-    )
+    return tf.reduce_sum([
+        tf.reduce_sum(tf.math.square(gram_matrix(content) - style)) for content, style in zip(content_feature_maps, style_gram_matrices)
+    ])
 
 
 def feature_temporal_loss(
     current_feature_maps, previous_feature_maps, reverse_optical_flow, occlusion_mask
 ):
     b, w, h, c = current_feature_maps.shape
-    feature_maps_diff = current_feature_maps - warp_back(
-        previous_feature_maps, reverse_optical_flow
-    )
-    loss = tf.reduce_sum(tf.square(occlusion_mask * feature_maps_diff)) / (c * h * w)
+    reverse_optical_flow_resized = tf.image.resize(images=reverse_optical_flow, size=(w, h))
+    occlusion_mask_resized = tf.image.resize(images=occlusion_mask, size=(w, h))
+    warp_previous, _ = warp_back(previous_feature_maps, reverse_optical_flow_resized)
+    feature_maps_diff = current_feature_maps - warp_previous
+    loss = tf.reduce_sum(tf.square(occlusion_mask_resized * feature_maps_diff)) / (c * h * w)
     return loss
 
 
@@ -172,7 +172,7 @@ def output_temporal_loss(
     luminance_input_diff = tf.expand_dims(luminance_input_diff, axis=3)
     b, w, h, c = current_input_frame.shape
     loss = tf.reduce_sum(
-        tf.square((occlusion_mask * (output_diff - luminance_input_diff)))
+        tf.math.square((occlusion_mask * (output_diff - luminance_input_diff)))
     ) / (h * w)
     return loss
 

@@ -23,6 +23,7 @@ def warp_back(image: tf.Tensor, flow: tf.Tensor) -> Tuple[tf.Tensor]:
         interpolation
     """
     batch_size, height, width, channels = image.shape
+    print(f"{channels=}")
 
     # The flow is defined on the image grid. Turn the flow into a list of query
     # points in the grid space.
