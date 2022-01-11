@@ -9,16 +9,20 @@ from models.utils import warp_back, get_luminance_grayscale, calculate_luminance
 class ReCoNetLoss:
     """Write a class, they said. It'll be fun, they said"""
 
-    def __init__(self, args):
-        _content_loss: float = 0.0
-        _style_loss: float = 0.0
-        _feature_temporal_loss: float = 0.0
-        _output_temporal_loss: float = 0.0
-        _total_variation: float = 0.0
+    alpha: float
+    beta: float
+    gamma: float
+    lambda_f: float
+    lambda_o: float
+
+    _content_loss: float = 0.0
+    _style_loss: float = 0.0
+    _feature_temporal_loss: float = 0.0
+    _output_temporal_loss: float = 0.0
+    _total_variation: float = 0.0
 
     def __call__(
         self,
-        args,
         current_vgg_out,
         current_vgg_in,
         previous_vgg_out,
@@ -35,7 +39,6 @@ class ReCoNetLoss:
         """Calculate the full loss for the ReCoNet model
 
         Args:
-            args (argparse.Namespace): Main argument
             current_vgg_out (tf.Tensor): The vgg output for the current frame
             current_vgg_in (tf.Tensor): The vgg input for the current frame
             previous_vgg_out (tf.Tensor): The vgg output for the previous frame
@@ -52,11 +55,6 @@ class ReCoNetLoss:
         Returns:
             float: The loss for the reconet model
         """
-        self.alpha: float = args.ALPHA
-        self.beta: float = args.BETA
-        self.gamma: float = args.GAMMA
-        self.lambda_f: float = args.LAMBDA - F
-        self.lambda_o: float = args.LAMBDA - O
 
         content_loss_ = self.alpha * content_loss(
             current_vgg_out[2], current_vgg_in[2]
