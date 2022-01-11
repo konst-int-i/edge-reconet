@@ -2,7 +2,6 @@ import tensorflow as tf
 from dataclasses import dataclass
 
 from typing import Iterable
-
 from models.utils import warp_back, get_luminance_grayscale, calculate_luminance_mask
 
 
@@ -62,6 +61,7 @@ class ReCoNetLoss:
         content_loss_ = self.alpha * content_loss(
             current_vgg_out[2], current_vgg_in[2]
         ) + self.alpha * content_loss(previous_vgg_out[2], current_vgg_out[2])
+        # TODO - shouldn't this be 1 in TF?
 
         style_loss_ = self.beta * style_loss(
             current_vgg_out, style_gram_matrices
@@ -114,6 +114,7 @@ def gram_matrix(input_tensor):
     result = tf.linalg.einsum("bijc,bijd->bcd", input_tensor, input_tensor)
     input_shape = tf.shape(input_tensor)
     num_locations = tf.cast(input_shape[1] * input_shape[2], tf.float32)
+    # TODO - check if these are the right shapes?
     return result / (num_locations)
 
 
@@ -122,7 +123,8 @@ def temporal_feature_loss(feat1_warp, feat2):
 
 
 def content_loss(content_feature_maps, style_feature_maps):
-    b, w, h, c = content_feature_maps.shape
+    # b, w, h, c = content_feature_maps.shape
+    w, h, c = content_feature_maps.shape
     return tf.reduce_sum(tf.square(content_feature_maps - style_feature_maps)) / (
         c * w * h
     )
@@ -161,8 +163,15 @@ def output_temporal_loss(
         previous_output_frame, reverse_optical_flow
     )
     print(input_diff.get_shape())
-    luminance_input_diff = tf.expand_dims(get_luminance_grayscale(input_diff))
-
+    # get rgb values from input_diff
+    red_coef = 0.2126
+    green_coef = 0.7152
+    blue_coef = 0.0722
+    # luminance_input_diff = tf.expand_dims(get_luminance_grayscale(input_diff))
+    luminance_input_diff = get_luminance_grayscale(
+        input_diff, red_coef, green_coef, blue_coef
+    )
+    luminance_input_diff = tf.expand_dims(luminance_input_diff, axis=3)
     b, w, h, c = current_input_frame.shape
     loss = tf.reduce_sum(
         tf.square((occlusion_mask * (output_diff - luminance_input_diff)))

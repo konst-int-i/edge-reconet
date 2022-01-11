@@ -1,5 +1,6 @@
 import argparse
 import os
+import numpy as np
 from models.reconet import build_reconet
 from models.utils import save_model, warp_back, calculate_luminance_mask
 from postprocessing.quantisation import quantise_model
@@ -52,7 +53,7 @@ def build_toy_model():
 def train(
     args: argparse.Namespace,
     train_dataset: Dataset,
-    style_model: tf.Module,
+    reconet: tf.Module,
     loss_model: tf.keras.Model,
     mse_loss,
     sum_mse_loss,
@@ -68,76 +69,112 @@ def train(
     # for epoch in range(args.epochs):
     for epoch in range(1):  # TODO - change to actual epochs
         data_bar = tqdm(train_dataset)
-        for id, sample in enumerate(data_bar):
-            print(id)
-            if id == 2:
-                break
-            img_previous, img_current, mask, flow = sample
-            # optical flow in dataset is opposite
-            img_current, img_previous = img_previous, img_current
+        with tf.GradientTape() as tape:
 
-            current_inverse_warp, transition_mask_boundary = warp_back(
-                img_current, flow
-            )
-            luminance_mask = calculate_luminance_mask(
-                current_inverse_warp, img_current, mask
-            )
+            for id, sample in enumerate(data_bar):
+                print(id)
+                if id == 2:
+                    break
+                img_previous, img_current, mask, flow = sample
+                # optical flow in dataset is opposite
+                img_current, img_previous = img_previous, img_current
 
-            feat_previous, output_img_previous = style_model(img_previous)
-            feat_current, output_img_current = style_model(img_current)
+                current_inverse_warp, transition_mask_boundary = warp_back(
+                    img_current, flow
+                )
+                luminance_mask = calculate_luminance_mask(
+                    current_inverse_warp, img_current, mask
+                )
 
-            # Calculate flow and mask for feature 1
-            resize_size = (feat_previous.get_shape()[1], feat_previous.get_shape()[2])
-            print(f"resizing to {resize_size}")
-            feat_previous_flow = tf.image.resize(images=flow, size=resize_size)
-            feat_previous_mask = tf.image.resize(images=mask, size=resize_size)
+                feat_previous, output_img_previous = reconet(img_previous)
+                feat_current, output_img_current = reconet(img_current)
 
-            feat_previous_inv_warp, feat_previous_mask_boundary = warp_back(
-                feat_previous, feat_previous_flow
-            )
-            # temp_feature_loss = temporal_feature_loss(feat_previous_warp, feat_current)
+                # Calculate flow and mask for feature 1
+                feat_map_size = (
+                    feat_previous.get_shape()[1],
+                    feat_previous.get_shape()[2],
+                )
+                print(f"resizing to {feat_map_size}")
+                rev_optical_flow_resized = tf.image.resize(
+                    images=flow, size=feat_map_size
+                )
+                occlusion_mask_resized = tf.image.resize(
+                    images=mask, size=feat_map_size
+                )
 
-            # ReCoNetLoss()
-            print(f"feat2 shape: ", feat_current.get_shape())
-            print(f"feat1_flow shape: ", feat_previous_flow.get_shape())
-            print(f"feat1_warp_shape: ", feat_previous_inv_warp.get_shape())
-            print(f"Mask boundary_img1: ", transition_mask_boundary.get_shape())
-            feat_previous_mask = calculate_luminance_mask(
-                feat_previous_inv_warp, feat_current, feat_previous_mask
-            )
+                feat_previous_inv_warp, feat_previous_mask_boundary = warp_back(
+                    feat_previous, rev_optical_flow_resized
+                )
 
-            # temporal feature loss
-            temp_feature_loss = feature_temporal_loss(
-                current_feature_maps=feat_current,
-                previous_feature_maps=feat_previous,
-                reverse_optical_flow=feat_previous_flow,
-                occlusion_mask=feat_previous_mask,
-            )
-            print("Temporal feature loss", temp_feature_loss)
+                # ReCoNetLoss()
+                print(f"feat2 shape: ", feat_current.get_shape())
+                print(f"feat1_flow shape: ", rev_optical_flow_resized.get_shape())
+                print(f"feat1_warp_shape: ", feat_previous_inv_warp.get_shape())
+                print(f"Mask boundary_img1: ", transition_mask_boundary.get_shape())
+                occlusion_mask_resized = calculate_luminance_mask(
+                    feat_previous_inv_warp, feat_current, occlusion_mask_resized
+                )
 
-            # get output temporal loss
-            # temp_ouptput_loss = output_temporal_loss(
-            #     current_input_frame=img_current,
-            #     previous_input_frame=img_previous,
-            #     current_output_frame=output_img_current,
-            #     previous_output_frame=output_img_previous,
-            #     reverse_optical_flow=flow,
-            #     occlusion_mask=mask
-            # )
-            # print("Temporal output loss", temp_ouptput_loss)
+                # temporal feature loss
+                temp_feature_loss = feature_temporal_loss(
+                    current_feature_maps=feat_current,
+                    previous_feature_maps=feat_previous,
+                    reverse_optical_flow=rev_optical_flow_resized,
+                    occlusion_mask=occlusion_mask_resized,
+                )
+                print("Temporal feature loss", temp_feature_loss)
 
-            # get content feature maps
-            # normalize
-            img_current_norm = normalization(output_img_current)
-            img_previous_norm = normalization(output_img_previous)
+                # get output temporal loss
+                temp_ouptput_loss = output_temporal_loss(
+                    current_input_frame=img_current,
+                    previous_input_frame=img_previous,
+                    current_output_frame=output_img_current,
+                    previous_output_frame=output_img_previous,
+                    reverse_optical_flow=flow,
+                    occlusion_mask=mask,
+                )
+                print("Temporal output loss", temp_ouptput_loss)
 
-            # pass through vgg
-            # vgg_output_current = loss_model(img_current_norm)
-            # vgg_output_previous = loss_model(img_previous_norm)
+                # get content feature maps
+                # normalize
+                img_current_norm = normalization(output_img_current)
+                img_previous_norm = normalization(output_img_previous)
 
-            # print(vgg_output_current.get_shape())
-            # print(vgg_output_previous.get_shape())
-            # vgg_input_current =
+                # pass through vgg
+                # loss_model = VGG16(include_top=False, input_shape=(args.height, args.width, 3))
+                #
+                # vgg_output_current = loss_model(img_current_norm)
+                # vgg_output_previous = loss_model(img_previous_norm)
+
+                style_gram_matrix = [gram_matrix(style_img)]
+
+                # test style loss call
+                # style_loss_test = style_loss(vgg_output_current, style_img)
+
+                # total variation test
+                variation = total_variation(output_img_current)
+                # test content loss
+                content_loss_test = content_loss(
+                    vgg_output_current[1], vgg_output_previous[1]
+                )
+
+                # test pass-on
+                # total_loss = np.sum([
+                #     variation.numpy(),
+                #     content_loss_test.numpy(),
+                #     # temp_feature_loss,
+                #     ]
+                # )
+
+                print("Content loss", variation)
+                print("variation", content_loss_test)
+                # print(style_gram_matrix)
+                # print(style_loss_test)
+                # print(vgg_output_current.get_shape())
+                # print(vgg_output_previous.get_shape())
+                # vgg_input_current =
+                # gradients = tape.gradient(total_loss)
+                # optimizer.apply_gradients(gradients)
 
 
 if __name__ == "__main__":
@@ -152,8 +189,9 @@ if __name__ == "__main__":
     style_img = Image.open(args.style_name)
     style_img = style_img.resize((args.width, args.height), Image.BILINEAR)
     style_img = tf.convert_to_tensor(style_img)
-    # style_img = tf.transpose(style_img, (2, 0, 1)) # no need to transpose since tf tensors are ordered differently
-    print(style_img)
+    style_img = tf.transpose(style_img, (1, 0, 2))
+    style_img = tf.cast(tf.expand_dims(style_img / 255, axis=0), dtype=tf.float32)
+    print("Style img", style_img.shape)
 
     style_model = ReCoNet()
     # loss_model = VGG16(weights="imagenet", classifier_activation=)
@@ -192,7 +230,7 @@ if __name__ == "__main__":
         mse_loss=mse_loss,
         sum_mse_loss=sum_mse_loss,
         optimizer=optimizer,
-        style_model=style_model,
+        reconet=style_model,
         norm_mean=cnn_normalization_mean,
         norm_std=cnn_normalization_std,
     )
