@@ -50,7 +50,7 @@ def build_toy_model():
     save_model(quantised)
 
 
-def train(
+def train_legacy(
     args: argparse.Namespace,
     train_dataset: Dataset,
     reconet: tf.Module,

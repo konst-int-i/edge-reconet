@@ -16,6 +16,23 @@ class Normalization(tf.Module):
         return (img - self.mean) / self.std
 
 
+# def reconet_norm(img):
+class ReconetNorm(tf.Module):
+    def __init__(self):
+        super(ReconetNorm, self).__init__()
+
+    def __call__(self, img):
+        return (img * 2) - 1
+
+
+class ReconetUnnorm(tf.Module):
+    def __init__(self):
+        super(ReconetUnnorm, self).__init__()
+
+    def __call__(self, img):
+        return (img + 1) / 2
+
+
 class ConvolutionalLayer(tf.Module):
     def __init__(self, out_channels, kernel_size, stride, bias=True):
         super(ConvolutionalLayer, self).__init__()
@@ -111,17 +128,3 @@ if __name__ == "__main__":
     # test convlayer
     model = ReCoNet()
     feat, x = model(x)
-    # print(feat)
-    # model = ConvolutionalLayer(32, 9, 1)
-    # cir1 = ConvInstReLU(32, 9, 1)
-    # cir2 = ConvInstReLU(64, 3, 2)
-    # cir3 = ConvInstReLU(128, 3, 2)
-    # res = ResBlock(128)
-    # x = cir1(x)
-    # x = cir2(x)
-    # x = cir3(x)
-    # x = res(x)
-
-    print(tf.transpose(x, (0, 3, 2, 1)))
-    # print(tf.transpose(feat, (0, 3, 2, 1)))
-    # print(x)

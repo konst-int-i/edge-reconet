@@ -1,12 +1,18 @@
 import tensorflow as tf
-from tensorflow.keras.applications.vgg16 import VGG16
-from models.losses import temporal_feature_loss
-from models.utils import calculate_luminance_mask
+from tensorflow.data import Dataset
+
+from edge_tpu_video_style.preprocessing.read_mpi import read_style_image
+
 # from models.reconet import make_reconet
-from models.layers import ReCoNet # Needs to be moved into reconet.py
+from models.layers import ReCoNet, ReconetNorm, ReconetUnnorm
 from preprocessing import MPIDataSet
+from tensorflow.keras import optimizers
+from tqdm import tqdm
 from models.layers import Normalization
 from models.losses import ReCoNetLoss, gram_matrix
+from utils.parser import parser
+from tensorflow.keras.applications.vgg16 import preprocess_input
+
 
 from pathlib import Path
 
@@ -18,17 +24,31 @@ NORM_STD = tf.constant([0.229, 0.224, 0.225])
 normalization = Normalization(NORM_MEAN, NORM_STD)
 
 
-def vgg_layers():
-    """ Creates a vgg model that returns a list of intermediate output values."""
+def vgg_prep(img):
+    return preprocess_input(255 * img)
 
-    style_layers = ['block1_conv1',
-                    'block2_conv1',
-                    'block3_conv1', 
-                    'block4_conv1', 
-                    'block5_conv1']
+
+def vgg_postprocess(images):
+    return [img / 255 for img in images]
+
+
+def call_vgg(img, vgg):
+    return vgg_postprocess(vgg(vgg_prep(img)))
+
+
+def vgg_layers():
+    """Creates a vgg model that returns a list of intermediate output values."""
+
+    style_layers = [
+        "block1_conv1",
+        "block2_conv1",
+        "block3_conv1",
+        "block4_conv1",
+        # 'block5_conv1',
+    ]
 
     # Load our model. Load pretrained VGG, trained on imagenet data
-    vgg = tf.keras.applications.VGG19(include_top=False, weights='imagenet')
+    vgg = tf.keras.applications.VGG16(include_top=False, weights="imagenet")
     vgg.trainable = False
 
     outputs = [vgg.get_layer(name).output for name in style_layers]
@@ -37,80 +57,131 @@ def vgg_layers():
     return model
 
 
-class Foo:
-    ...
-
-def vgg_preprocess(image):
+def vgg_norm(image):
     return normalization(image)
 
-@tf.function()
-def train_step(sample, style, reconet, vgg, args):
-    loss_fn = ReCoNetLoss(args.ALPHA, args.BETA, args.GAMMA, args.LAMBDA_F, args.LAMBDA_O)
+
+# @tf.function
+def train_step(args, sample, style, reconet, vgg):
+    loss_fn = ReCoNetLoss(
+        args["ALPHA"], args["BETA"], args["GAMMA"], args["LAMBDA_F"], args["LAMBDA_O"]
+    )
+    norm = ReconetNorm()
+    unnorm = ReconetUnnorm()
 
     with tf.GradientTape() as tape:
+        tape.watch(reconet.variables)
+
         current_frame, previous_frame, flow, motion_boundaries = sample
         inverse_warp, reverse_motion_boundaries = warp_back(current_frame, flow)
-        occlusion_mask = calculate_luminance_mask(inverse_warp, previous_frame, motion_boundaries)
-        
-        current_frame_features, current_frame_output = reconet(current_frame)
-        previous_frame_features, previous_frame_output = reconet(previous_frame)
-
-        _, feature_width, feature_height, _ = current_frame_features.shape
-        current_feature_flow = tf.image.resize(images=flow, size=(feature_width, feature_height))
-        current_feature_warp, _ = warp_back(current_frame_features, current_feature_flow)
-
-        current_vgg_in = vgg(vgg_preprocess(current_frame))
-        current_vgg_out = vgg(vgg_preprocess(current_frame_output))
-        previous_vgg_in = vgg(vgg_preprocess(previous_frame))
-        previous_vgg_out = vgg(vgg_preprocess(previous_frame_output))
-
-        style_gram_matricies = [gram_matrix(x) for x in vgg(style)]
-
-        loss = loss_fn(
-            current_vgg_out=current_vgg_out, 
-            current_vgg_in=current_vgg_in, 
-            previous_vgg_out=previous_vgg_out,
-            style_gram_matrices=style_gram_matricies,
-            current_output_frame=current_frame_output, 
-            previous_output_frame=previous_frame_output,
-            current_input_frame=current_frame, 
-            previous_input_frame=previous_frame, 
-            current_feature_maps=current_frame_features,
-            previous_feature_maps=previous_frame_features, 
-            reverse_optical_flow=flow, #Also unsure
-            occlusion_mask=occlusion_mask  # Unsure?
+        occlusion_mask = calculate_luminance_mask(
+            inverse_warp, previous_frame, motion_boundaries
         )
 
-    return tape.gradient(loss, [current_frame, previous_frame, motion_boundaries, flow])
+        current_frame_features, current_frame_output = reconet(norm(current_frame))
+        previous_frame_features, previous_frame_output = reconet(norm(previous_frame))
+
+        _, feature_width, feature_height, _ = current_frame_features.shape
+        current_feature_flow = tf.image.resize(
+            images=flow, size=(feature_width, feature_height)
+        )
+        current_feature_warp, _ = warp_back(
+            current_frame_features, current_feature_flow
+        )
+
+        with tape.stop_recording():
+
+            # Unonrmalize from reconet and apply VGG-specific norm
+            current_vgg_out = call_vgg(unnorm(current_frame_output), vgg)
+            previous_vgg_out = call_vgg(unnorm(previous_frame_output), vgg)
+            current_vgg_in = call_vgg(current_frame, vgg)
+            previous_vgg_in = call_vgg(previous_frame, vgg)
+            style_gram_matrices = [gram_matrix(x) for x in call_vgg(style, vgg)]
+
+        loss = loss_fn(
+            current_vgg_out=current_vgg_out,
+            current_vgg_in=current_vgg_in,
+            previous_vgg_out=previous_vgg_out,
+            style_gram_matrices=style_gram_matrices,
+            current_output_frame=current_frame_output,
+            previous_output_frame=previous_frame_output,
+            current_input_frame=norm(current_frame),
+            previous_input_frame=norm(previous_frame),
+            current_feature_maps=current_frame_features,
+            previous_feature_maps=previous_frame_features,
+            reverse_optical_flow=flow,  # Also unsure
+            occlusion_mask=occlusion_mask,  # Unsure?
+        )
+
+    print(f"{loss=}")
+    print(loss_fn)
+
+    gradients = tape.gradient(loss, reconet.variables)
+    # [current_frame, previous_frame, motion_boundaries, flow]
+    # )
+
+    # print(f"{gradients=}")
+
+    return gradients
+
+
+# @tf.function
+# def predict():
+#     with tf.GradientTape() as tape:
+
+
+def train_loop(args, train_data, optimizer, style, reconet, vgg):
+
+    # for epoch in args.epochs:
+    for epoch in range(1):
+        data_bar = tqdm(train_data)
+        for id, sample in enumerate(data_bar):
+
+            if id == 2:
+                break
+
+            gradients = train_step(vars(args), sample, style, reconet, vgg)
+            print(gradients)
+            # optimizer.apply_gradients()
 
 
 def main():
-    args = Foo()
-    args.width = 512
-    args.height = 216
-    args.path = "MPI-Sintel-complete"
+    args = parser.parse_args()
     train_data = MPIDataSet(Path(args.path).joinpath("training"), args)
-    test_data = MPIDataSet(Path(args.path).joinpath("test"), args)
 
+    # convert to tf dataset & batch
     signature = (tf.float32, tf.float32, tf.float32, tf.float32)
+    train_dataset = Dataset.from_generator(
+        train_data, output_types=signature, name="train"
+    )
+    # might want to shuffle, but slow for debugging
+    train_dataset = train_dataset.batch(args.batch_size)
+    print(type(args))
 
-    im1 = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 3))
-    im2 = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 3))
-    flow = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 2))
-    mask = tf.where(
-        tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 1)) > 0.5,
-        1., 0.)
+    optimizer = optimizers.Adamax(learning_rate=args.lr)
 
-    style = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 3))
+    # read & process style image
+    style_img = read_style_image(args)
+
+    #
+    # im1 = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 3))
+    # im2 = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 3))
+    # flow = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 2))
+    # mask = tf.where(
+    #     tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 1)) > 0.5,
+    #     1., 0.)
+    #
+    # style = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 3))
 
     reconet = ReCoNet()
     vgg = vgg_layers()
 
-    args.ALPHA, args.BETA, args.GAMMA, args.LAMBDA_F, args.LAMBDA_O = 1, 1, 1, 1, 1
+    # args.ALPHA, args.BETA, args.GAMMA, args.LAMBDA_F, args.LAMBDA_O = 1, 1, 1, 1, 1
 
-    sample = (im1, im2, flow, mask)
-    train_step(sample, style, reconet, vgg, args)
+    # sample = (im1, im2, flow, mask)
+    # train_step(sample, style, reconet, vgg, args)
+    train_loop(args, train_dataset, optimizer, style_img, reconet, vgg)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()

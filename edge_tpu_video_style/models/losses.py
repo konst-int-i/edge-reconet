@@ -59,7 +59,6 @@ class ReCoNetLoss:
         content_loss_ = self.alpha * content_loss(
             current_vgg_out[2], current_vgg_in[2]
         ) + self.alpha * content_loss(previous_vgg_out[2], current_vgg_out[2])
-        # TODO - shouldn't this be 1 in TF?
 
         style_loss_ = self.beta * style_loss(
             current_vgg_out, style_gram_matrices
@@ -91,13 +90,15 @@ class ReCoNetLoss:
         self._feature_temporal_loss = feature_temporal_loss_
         self._output_temporal_loss = output_temporal_loss_
 
-        return sum([
-            content_loss_,
-            style_loss_,
-            total_variation_,
-            feature_temporal_loss_,
-            output_temporal_loss_,
-        ])
+        return sum(
+            [
+                content_loss_,
+                style_loss_,
+                total_variation_,
+                feature_temporal_loss_,
+                output_temporal_loss_,
+            ]
+        )
 
     def __repr__(self):
         loss_str = f"""{self._content_loss=}, 
@@ -108,12 +109,20 @@ class ReCoNetLoss:
         return loss_str
 
 
-def gram_matrix(input_tensor):
-    result = tf.linalg.einsum("bijc,bijd->bcd", input_tensor, input_tensor)
-    input_shape = tf.shape(input_tensor)
-    num_locations = tf.cast(input_shape[1] * input_shape[2], tf.float32)
-    # TODO - check if these are the right shapes?
-    return result / (num_locations)
+# def gram_matrix(input_tensor):
+#     result = tf.linalg.einsum("bijc,bijd->bcd", input_tensor, input_tensor)
+#     input_shape = tf.shape(input_tensor)
+#     num_locations = tf.cast(input_shape[1] * input_shape[2], tf.float32)
+#     # TODO - check if these are the right shapes?
+#     return result / (num_locations)
+
+
+def gram_matrix(layer):
+    bs, height, width, filters = layer.shape
+    feats = tf.reshape(layer, (bs, height * width, filters))
+    feats_T = tf.transpose(a=feats, perm=[0, 2, 1])
+    grams = tf.matmul(feats_T, feats) / (height * width * filters)
+    return grams
 
 
 def temporal_feature_loss(feat1_warp, feat2):
@@ -123,26 +132,34 @@ def temporal_feature_loss(feat1_warp, feat2):
 def content_loss(content_feature_maps, style_feature_maps):
     b, w, h, c = content_feature_maps.shape
     # w, h, c = content_feature_maps.shape
-    return tf.reduce_sum(tf.square(content_feature_maps - style_feature_maps)) / (
-        c * w * h
-    )
+    # return tf.reduce_sum(tf.square(content_feature_maps - style_feature_maps)) / (
+    #     c * w * h
+    # )
+    return tf.reduce_mean(tf.square(content_feature_maps - style_feature_maps))
 
 
 def style_loss(content_feature_maps, style_gram_matrices):
-    return tf.reduce_sum([
-        tf.reduce_sum(tf.math.square(gram_matrix(content) - style)) for content, style in zip(content_feature_maps, style_gram_matrices)
-    ])
+    return tf.reduce_sum(
+        [
+            tf.reduce_mean(tf.math.square(gram_matrix(content) - style))
+            for content, style in zip(content_feature_maps, style_gram_matrices)
+        ]
+    )
 
 
 def feature_temporal_loss(
     current_feature_maps, previous_feature_maps, reverse_optical_flow, occlusion_mask
 ):
     b, w, h, c = current_feature_maps.shape
-    reverse_optical_flow_resized = tf.image.resize(images=reverse_optical_flow, size=(w, h))
+    reverse_optical_flow_resized = tf.image.resize(
+        images=reverse_optical_flow, size=(w, h)
+    )
     occlusion_mask_resized = tf.image.resize(images=occlusion_mask, size=(w, h))
     warp_previous, _ = warp_back(previous_feature_maps, reverse_optical_flow_resized)
     feature_maps_diff = current_feature_maps - warp_previous
-    loss = tf.reduce_sum(tf.square(occlusion_mask_resized * feature_maps_diff)) / (c * h * w)
+    loss = tf.reduce_sum(tf.square(occlusion_mask_resized * feature_maps_diff)) / (
+        c * h * w
+    )
     return loss
 
 
