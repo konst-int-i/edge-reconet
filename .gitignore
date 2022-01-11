@@ -140,3 +140,5 @@ saved_models/*
 
 # VS Code
 .DS_Store
+
+edge/
