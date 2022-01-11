@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.data import Dataset
-from edge_tpu_video_style.utils.io import read
+from utils.io import read
 from PIL import Image
 from skimage import transform
 import torch

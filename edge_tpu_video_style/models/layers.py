@@ -1,7 +1,6 @@
 import tensorflow as tf
 import math
 import numpy as np
-import torch
 from tensorflow.keras import layers
 from tensorflow.keras import activations
 import tensorflow_addons as tfa

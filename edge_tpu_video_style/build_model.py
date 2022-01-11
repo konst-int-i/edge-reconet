@@ -3,7 +3,7 @@ import os
 from models.reconet import build_reconet
 from models.utils import save_model, warp_back, calculate_luminance_mask
 from postprocessing.quantisation import quantise_model
-from edge_tpu_video_style.utils.parser import parser
+from utils.parser import parser
 from models.layers import ReCoNet
 from models.layers import Normalization
 from preprocessing.dataset import MPIDataSet

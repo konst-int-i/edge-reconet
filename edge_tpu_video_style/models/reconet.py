@@ -8,6 +8,8 @@ from timeit import default_timer as timer
 from models.utils import save_model
 from postprocessing.quantisation import quantise_model
 
+from models.layers import ReCoNet
+
 
 def resblock(x, kernelsize, filters):
     fx = layers.Conv2D(filters, kernelsize, activation="relu", padding="same")(x)
@@ -35,8 +37,9 @@ def instance_normalisation(x):
     return normed
 
 
-def build_reconet() -> tf.keras.Model:
-    encoder_input = keras.Input(shape=(32, 32, 3), name="original_img")
+def build_reconet(inputs) -> tf.keras.Model:
+    encoder_input = inputs['encoder_input']
+    # encoder_input = keras.Input(shape=(32, 32, 3), name="original_img")
     x = conv_instnorm_relu(encoder_input, 32, 9)
     x = layers.Conv2D(64, 3, padding="same", strides=(1, 1), activation="relu")(x)
     x = conv_instnorm_relu(x, 32, 3)
@@ -56,6 +59,4 @@ def build_reconet() -> tf.keras.Model:
     x = layers.Conv2D(32, 9, padding="same", activation="tanh")(x)
     output = layers.Conv2D(3, 9, padding="same")(x)
 
-    model = tf.keras.Model(inputs=encoder_input, outputs=output)
-
-    return model
+    return features, output
