@@ -17,6 +17,13 @@ from pathlib import Path
 from models.utils import warp_back, calculate_luminance_mask
 import numpy
 
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = (
+    0.9  # 0.6 sometimes works better for folks
+)
+tf.keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
+
+
 # set seed for debugging
 tf.random.set_seed(1)
 numpy.random.seed(1)
