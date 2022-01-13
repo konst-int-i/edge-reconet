@@ -158,7 +158,7 @@ def main():
     train_data = MPIDataSet(Path(args.path).joinpath("training"), args)
 
     # convert to tf dataset & batch
-    signature = (tf.float16, tf.float16, tf.float16, tf.float16)
+    signature = (tf.float32, tf.float32, tf.float32, tf.float32)
     train_dataset = Dataset.from_generator(
         train_data, output_types=signature, name="train"
     )
