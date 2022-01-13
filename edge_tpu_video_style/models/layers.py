@@ -1,12 +1,10 @@
 import tensorflow as tf
-import math
-import numpy as np
 from tensorflow.keras import layers
 from tensorflow.keras import activations
 import tensorflow_addons as tfa
 
 
-class Normalization(tf.Module):
+class Normalization(layers.Layer):
     def __init__(self, mean, std):
         super(Normalization, self).__init__()
         self.mean = tf.reshape(mean, (1, 1, -1))
@@ -16,8 +14,7 @@ class Normalization(tf.Module):
         return (img - self.mean) / self.std
 
 
-# def reconet_norm(img):
-class ReconetNorm(tf.Module):
+class ReconetNorm(layers.Layer):
     def __init__(self):
         super(ReconetNorm, self).__init__()
 
@@ -25,7 +22,7 @@ class ReconetNorm(tf.Module):
         return (img * 2) - 1
 
 
-class ReconetUnnorm(tf.Module):
+class ReconetUnnorm(layers.Layer):
     def __init__(self):
         super(ReconetUnnorm, self).__init__()
 
@@ -33,11 +30,9 @@ class ReconetUnnorm(tf.Module):
         return (img + 1) / 2
 
 
-class ConvolutionalLayer(tf.Module):
+class ConvolutionalLayer(layers.Layer):
     def __init__(self, out_channels, kernel_size, stride, bias=True):
         super(ConvolutionalLayer, self).__init__()
-        padd = int(math.floor(kernel_size / 2))
-        # self.reflect = ReflectionPadding2D(padd)
         self.conv = layers.Conv2D(
             out_channels, kernel_size, strides=stride, use_bias=bias, padding="same"
         )
@@ -60,7 +55,7 @@ class ConvInstReLU(ConvolutionalLayer):
         return x
 
 
-class ResBlock(tf.Module):
+class ResBlock(layers.Layer):
     def __init__(self, filters, kernel_size=3, stride=1, padding=1):
         super(ResBlock, self).__init__()
         self.conv = layers.Conv2D(filters, kernel_size, stride, padding="same")
@@ -102,7 +97,6 @@ class ReCoNet(tf.keras.Model):
 
         feat_map = x
 
-        # for _ in range(2):
         x = self.upsample(x)
         x = self.conv_inst_relu_dev1(x)
         x = self.upsample(x)
@@ -114,11 +108,4 @@ class ReCoNet(tf.keras.Model):
 
 
 if __name__ == "__main__":
-    torch.manual_seed(0)
-    input_pt = torch.randn(1, 3, 216, 512)
-    input_np = input_pt.numpy()
-    input = tf.convert_to_tensor(input_np)
-    x = tf.transpose(input, (0, 3, 2, 1))
-    # test convlayer
-    model = ReCoNet()
-    feat, x = model(x)
+    pass
