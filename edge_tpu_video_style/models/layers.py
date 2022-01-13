@@ -67,8 +67,6 @@ class ResBlock(tf.Module):
         super(ResBlock, self).__init__()
         self.conv = layers.Conv2D(filters, kernel_size, stride, padding="same")
         self.instnorm = tfa.layers.InstanceNormalization()
-        # self.second_conv = layers.Conv2D(filters, kernel_size, stride, padding="same")
-        # self.se = tfa.InstanceNormalization(filters)
         self.relu = activations.relu
 
     # def forward(self, x):
@@ -80,7 +78,7 @@ class ResBlock(tf.Module):
         return x
 
 
-class ReCoNet(tf.Module):
+class ReCoNet(tf.keras.Model):
     def __init__(self):
         super(ReCoNet, self).__init__()
         self.conv_inst_relu1 = ConvInstReLU(32, 9, 1)
@@ -97,7 +95,7 @@ class ReCoNet(tf.Module):
         self.activation_conv = ConvolutionalLayer(3, 9, 1)
         self.tanh = activations.tanh
 
-    def __call__(self, x):
+    def call(self, x):
         x = self.conv_inst_relu1(x)
         x = self.conv_inst_relu2(x)
         x = self.conv_inst_relu3(x)
