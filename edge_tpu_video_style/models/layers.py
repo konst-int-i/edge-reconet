@@ -4,11 +4,11 @@ from tensorflow.keras import activations
 import tensorflow_addons as tfa
 
 
-class InstanceNorm(tf.Module):
+class InstanceNorm(layers.Layer):
     def __init__(self):
         super().__init__()
 
-    def __call__(self, x):
+    def call(self, x):
         mean = tf.math.reduce_mean(x, axis=(1, 2), keepdims=True)
         recip_stdev = tf.math.rsqrt(
             tf.math.reduce_sum(tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True)
@@ -18,40 +18,40 @@ class InstanceNorm(tf.Module):
         return normed
 
 
-class Normalization(tf.Module):
+class Normalization(layers.Layer):
     def __init__(self, mean, std):
         super(Normalization, self).__init__()
         self.mean = tf.reshape(mean, (1, 1, -1))
         self.std = tf.reshape(std, (1, 1, -1))
 
-    def __call__(self, img):
+    def call(self, img):
         return (img - self.mean) / self.std
 
 
-class ReconetNorm(tf.Module):
+class ReconetNorm(layers.Layer):
     def __init__(self):
         super(ReconetNorm, self).__init__()
 
-    def __call__(self, img):
+    def call(self, img):
         return (img * 2) - 1
 
 
-class ReconetUnnorm(tf.Module):
+class ReconetUnnorm(layers.Layer):
     def __init__(self):
         super(ReconetUnnorm, self).__init__()
 
-    def __call__(self, img):
+    def call(self, img):
         return (img + 1) / 2
 
 
-class ConvolutionalLayer(tf.Module):
+class ConvolutionalLayer(layers.Layer):
     def __init__(self, out_channels, kernel_size, stride, bias=True):
         super(ConvolutionalLayer, self).__init__()
         self.conv = layers.Conv2D(
             out_channels, kernel_size, strides=stride, use_bias=bias, padding="same"
         )
 
-    def __call__(self, x):
+    def call(self, x):
         x = self.conv(x)
         return x
 
@@ -63,14 +63,14 @@ class ConvInstReLU(ConvolutionalLayer):
         # self.inst = tfa.layers.InstanceNormalization()
         self.relu = activations.relu
 
-    def __call__(self, x):
-        x = super(ConvInstReLU, self).__call__(x)
+    def call(self, x):
+        x = super(ConvInstReLU, self).call(x)
         x = self.inst(x)
         x = self.relu(x)
         return x
 
 
-class ResBlock(tf.Module):
+class ResBlock(layers.Layer):
     def __init__(self, filters, kernel_size=3, stride=1, padding=1):
         super(ResBlock, self).__init__()
         self.conv = layers.Conv2D(filters, kernel_size, stride, padding="same")
@@ -79,7 +79,7 @@ class ResBlock(tf.Module):
 
         self.relu = activations.relu
 
-    def __call__(self, x):
+    def call(self, x):
         res = x
         x = self.relu(self.inst(self.conv(x)))
         x = self.inst(self.conv(x))
@@ -104,7 +104,7 @@ class ReCoNet(tf.keras.Model):
         self.activation_conv = ConvolutionalLayer(3, 9, 1)
         self.tanh = activations.tanh
 
-    def __call__(self, x):
+    def call(self, x):
         x = self.conv_inst_relu1(x)
         x = self.conv_inst_relu2(x)
         x = self.conv_inst_relu3(x)
