@@ -1,15 +1,10 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.data import Dataset
-from edge_tpu_video_style.utils.io import read
+from utils.io import readFlow
 from PIL import Image
 from skimage import transform
-import torch
 import os
-from collections import Generator
-from tensorflow.keras.utils import Sequence
-
-# from collections import abc
 
 
 class MPIDataSet:
@@ -45,6 +40,8 @@ class MPIDataSet:
         assuming flow[0] contains flow in x direction and flow[1] contains flow in y
         """
         self.idx += 1
+        float_conv_factor = 255
+
         for i in range(0, len(self.numlist)):
             folder = self.dirlist[i]
             path = self.path.joinpath("clean").joinpath(folder)
@@ -62,43 +59,40 @@ class MPIDataSet:
                 )
                 mask = Image.open(occpath.joinpath(f"frame_{num1}.png")).resize(
                     (self.args.width, self.args.height), Image.BILINEAR
-                )
-                flow = read(flowpath.joinpath(f"frame_{num1}.flo"))
+                )  # note: changed from bilinear interpolation
 
-                img1 = tf.convert_to_tensor(img1, dtype=tf.float32)
-                # img1 = tf.transpose(img1, (2, 0, 1))
-                img2 = tf.convert_to_tensor(img2, dtype=tf.float32)
-                # img2 = tf.transpose(img2, (2, 0, 1))
+                flow = readFlow(str(flowpath.joinpath(f"frame_{num1}.flo")))
+
+                img1 = tf.convert_to_tensor(img1, dtype=tf.float32) / float_conv_factor
+                img1 = tf.transpose(img1, (1, 0, 2))
+                img2 = tf.convert_to_tensor(img2, dtype=tf.float32) / float_conv_factor
+                img2 = tf.transpose(img2, (1, 0, 2))
                 h, w, c = flow.shape
-                flow = (
-                    torch.from_numpy(
-                        transform.resize(flow, (self.args.height, self.args.width))
-                    )
-                    # .permute(2, 0, 1)
-                    .float().numpy()
-                )
-                # TODO - getting different dims when using numpy
-                # flow = np.transpose(flow, (2, 0, 1))
-                flow[0, :, :] *= float(flow.shape[1] / h)
-                flow[1, :, :] *= float(flow.shape[2] / w)
+
                 flow = tf.convert_to_tensor(flow, dtype=tf.float32)
-                # flow = tf.convert_to_tensor(transform.resize(flow, (self.args.height, self.args.width)))
+                flow = tf.transpose(flow, (1, 0, 2))
+                flow = tf.image.resize(
+                    images=flow, size=(self.args.width, self.args.height)
+                )
+                multiplier = tf.constant(
+                    [flow.shape[0] / w, flow.shape[1] / h], dtype=tf.float32
+                )
+                flow *= multiplier
 
                 ##take no occluded regions to compute
                 # need to convert to numpy array first
-                mask = np.asarray(mask)
+
+                mask = np.asarray(mask) / 255
                 mask = 1 - mask
-                mask[mask < 0.99] = 0
-                mask[mask > 0] = 1
+                mask = np.where((mask < 0.99), 0.0, 1.0)
                 # now convert to tensor
-                mask = tf.convert_to_tensor(mask)
+                mask = tf.convert_to_tensor(mask, dtype=tf.float32)
                 mask = tf.expand_dims(mask, axis=0)
                 mask = tf.transpose(mask, (2, 1, 0))
                 break
             self.idx -= self.numlist[i] - 1
             # IMG2 should be at t in IMG1 is at T-1
-
-        return (img1, img2, mask, flow)
+        return (img1, img2, flow, mask)
 
     def __call__(self, *args, **kwargs):
         return self
@@ -109,3 +103,12 @@ def toString(num):
     while len(string) < 4:
         string = "0" + string
     return string
+
+
+def read_style_image(args):
+    style_img = Image.open(args.style_name)
+    style_img = style_img.resize((args.width, args.height), Image.BILINEAR)
+    style_img = tf.convert_to_tensor(style_img)
+    style_img = tf.transpose(style_img, (1, 0, 2))
+    style_img = tf.cast(tf.expand_dims(style_img / 255, axis=0), dtype=tf.float32)
+    return style_img

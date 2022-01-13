@@ -8,32 +8,10 @@ parser.add_argument(
     metavar="N",
     help="input batch size for training (default: 1)",
 )
-parser.add_argument(
-    "--test-batch-size",
-    type=int,
-    default=1,
-    metavar="N",
-    help="input  batch size for test (default: 1)",
-)
-parser.add_argument(
-    "--phase", type=str, default="train", help="train, test, predict(default:train)"
-)
 parser.add_argument("--epochs", type=int, default=100, help="epoch (default:100)")
 parser.add_argument("--path", type=str, default="MPI-Sintel-complete", help="path")
 parser.add_argument(
-    "--log-interval", type=int, default=1, help="log interval(default:1)"
-)
-parser.add_argument(
     "--lr", type=float, default=0.001, help="learning rate(default:0.0001)"
-)
-parser.add_argument(
-    "--save-model", action="store_true", default=True, help="save the current Model"
-)
-parser.add_argument(
-    "--save-directory",
-    type=str,
-    default="trained_models",
-    help="learnt models are saving here",
 )
 parser.add_argument(
     "--LAMBDA-O", type=float, default=1e1, help="output_temp_loss hyperparameter"
@@ -46,7 +24,18 @@ parser.add_argument(
 )
 parser.add_argument("--BETA", type=float, default=1e5, help="style_loss hyperparameter")
 parser.add_argument("--GAMMA", type=float, default=1e-6, help="reg_loss hyperparameter")
-parser.add_argument("--model-name", type=str, default="", help="model name")
+parser.add_argument(
+    "--temp_output_scale",
+    type=float,
+    default=2e-3,
+    help="temporal output loss scale factor",
+)
+parser.add_argument(
+    "--temp_feature_scale",
+    type=float,
+    default=1e-3,
+    help="temporal feature loss scale factor",
+)
 parser.add_argument(
     "--style-name",
     type=str,
@@ -61,3 +50,10 @@ parser.add_argument("--shuffle_buffer", type=int, default=1024)
 parser.add_argument("--width", default=512)
 parser.add_argument("--height", default=216)
 parser.add_argument("--device", type=str, default="/physical_device:CPU:0")
+parser.add_argument(
+    "--model_name",
+    type=str,
+    default="reconet_model",
+    help="Folder name in `saved_models/` folder",
+)
+parser.add_argument("--debug", type=bool, default=False, help="Running in debug mode")

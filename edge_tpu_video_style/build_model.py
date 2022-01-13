@@ -1,10 +1,12 @@
 import argparse
 import os
+import numpy as np
 from models.reconet import build_reconet
 from models.utils import save_model, warp_back, calculate_luminance_mask
 from postprocessing.quantisation import quantise_model
-from edge_tpu_video_style.utils.parser import parser
+from utils.parser import parser
 from models.layers import ReCoNet
+from models.losses import *
 from models.layers import Normalization
 from preprocessing.dataset import MPIDataSet
 from PIL import Image
@@ -19,6 +21,10 @@ import tensorflow_addons as tfa
 import tensorflow as tf
 
 from timeit import default_timer as timer
+from dataclasses import dataclass
+from typing import Iterable
+
+from models.losses import temporal_feature_loss
 
 
 def build_toy_model():
@@ -44,10 +50,10 @@ def build_toy_model():
     save_model(quantised)
 
 
-def train(
+def train_legacy(
     args: argparse.Namespace,
     train_dataset: Dataset,
-    style_model: tf.Module,
+    reconet: tf.Module,
     loss_model: tf.keras.Model,
     mse_loss,
     sum_mse_loss,
@@ -63,54 +69,105 @@ def train(
     # for epoch in range(args.epochs):
     for epoch in range(1):  # TODO - change to actual epochs
         data_bar = tqdm(train_dataset)
-        for id, sample in enumerate(data_bar):
-            print(id)
-            if id == 2:
-                break
-            img1, img2, mask, flow = sample
-            img1, img2 = img2, img1
+        with tf.GradientTape() as tape:
 
-            img1_warp, mask_boundary_img1 = warp_back(img1, flow)
-            mask2 = calculate_luminance_mask(img1_warp, img2, mask)
+            for id, sample in enumerate(data_bar):
+                print(id)
+                if id == 2:
+                    break
+                img_previous, img_current, mask, flow = sample
+                # optical flow in dataset is opposite
+                img_current, img_previous = img_previous, img_current
 
-            feat1, output_img1 = style_model(img1)
-            feat2, output_img2 = style_model(img2)
-
-            # Calculate flow and mask for feature 1
-            resize_size = (feat1.get_shape()[1], feat1.get_shape()[2])
-            print(f"resizing to {resize_size}")
-            feat1_flow = tf.image.resize(images=flow, size=resize_size)
-            feat1_mask = tf.image.resize(images=mask, size=resize_size)
-
-            feat1_warp, mask_boundary_feat1 = warp_back(feat1, feat1_flow)
-            # temp_feature_loss = mse_loss(feat2, feat1_warp)
-            temp_feature_loss = calc_temp_feature_loss(feat1_warp, feat2)
-
-            print(f"feat2 shape: ", feat2.get_shape())
-            print(f"feat1_flow shape: ", feat1_flow.get_shape())
-            print(f"feat1_warp_shape: ", feat1_warp.get_shape())
-            print(f"Mask boundary_img1: ", mask_boundary_img1.get_shape())
-            print(f"Temp Feature loss shape: ", temp_feature_loss.get_shape())
-            #
-            feat1_mask = calculate_luminance_mask(feat1_warp, feat2, feat1_mask)
-
-            # calculate temporal feature loss
-            total_dims = tf.size(feat2, out_type=tf.float32)
-            temp_feature_loss = (
-                tf.math.reduce_sum(
-                    [temp_feature_loss * feat1_mask * mask_boundary_feat1]
+                current_inverse_warp, transition_mask_boundary = warp_back(
+                    img_current, flow
                 )
-                / total_dims
-            )
+                luminance_mask = calculate_luminance_mask(
+                    current_inverse_warp, img_current, mask
+                )
 
-            print("Mask feat 1: ", feat1_mask.get_shape())
-            print(temp_feature_loss)
+                feat_previous, output_img_previous = reconet(img_previous)
+                feat_current, output_img_current = reconet(img_current)
 
-            # return temporary_feature_loss
+                # Calculate flow and mask for feature 1
+                feat_map_size = (
+                    feat_previous.get_shape()[1],
+                    feat_previous.get_shape()[2],
+                )
+                rev_optical_flow_resized = tf.image.resize(
+                    images=flow, size=feat_map_size
+                )
+                occlusion_mask_resized = tf.image.resize(
+                    images=mask, size=feat_map_size
+                )
 
+                feat_previous_inv_warp, feat_previous_mask_boundary = warp_back(
+                    feat_previous, rev_optical_flow_resized
+                )
 
-def calc_temp_feature_loss(feat1_warp, feat2):
-    return tf.square(feat2 - feat1_warp)
+                # ReCoNetLoss()
+                occlusion_mask_resized = calculate_luminance_mask(
+                    feat_previous_inv_warp, feat_current, occlusion_mask_resized
+                )
+
+                # temporal feature loss
+                temp_feature_loss = feature_temporal_loss(
+                    current_feature_maps=feat_current,
+                    previous_feature_maps=feat_previous,
+                    reverse_optical_flow=rev_optical_flow_resized,
+                    occlusion_mask=occlusion_mask_resized,
+                )
+
+                # get output temporal loss
+                temp_ouptput_loss = output_temporal_loss(
+                    current_input_frame=img_current,
+                    previous_input_frame=img_previous,
+                    current_output_frame=output_img_current,
+                    previous_output_frame=output_img_previous,
+                    reverse_optical_flow=flow,
+                    occlusion_mask=mask,
+                )
+
+                # get content feature maps
+                # normalize
+                img_current_norm = normalization(output_img_current)
+                img_previous_norm = normalization(output_img_previous)
+
+                # pass through vgg
+                # loss_model = VGG16(include_top=False, input_shape=(args.height, args.width, 3))
+                #
+                # vgg_output_current = loss_model(img_current_norm)
+                # vgg_output_previous = loss_model(img_previous_norm)
+
+                style_gram_matrix = [gram_matrix(style_img)]
+
+                # test style loss call
+                # style_loss_test = style_loss(vgg_output_current, style_img)
+
+                # total variation test
+                variation = total_variation(output_img_current)
+                # test content loss
+                content_loss_test = content_loss(
+                    vgg_output_current[1], vgg_output_previous[1]
+                )
+
+                # test pass-on
+                # total_loss = np.sum([
+                #     variation.numpy(),
+                #     content_loss_test.numpy(),
+                #     # temp_feature_loss,
+                #     ]
+                # )
+
+                print("Content loss", variation)
+                print("variation", content_loss_test)
+                # print(style_gram_matrix)
+                # print(style_loss_test)
+                # print(vgg_output_current.get_shape())
+                # print(vgg_output_previous.get_shape())
+                # vgg_input_current =
+                # gradients = tape.gradient(total_loss)
+                # optimizer.apply_gradients(gradients)
 
 
 if __name__ == "__main__":
@@ -125,8 +182,8 @@ if __name__ == "__main__":
     style_img = Image.open(args.style_name)
     style_img = style_img.resize((args.width, args.height), Image.BILINEAR)
     style_img = tf.convert_to_tensor(style_img)
-    # style_img = tf.transpose(style_img, (2, 0, 1)) # no need to transpose since tf tensors are ordered differently
-    print(style_img)
+    style_img = tf.transpose(style_img, (1, 0, 2))
+    style_img = tf.cast(tf.expand_dims(style_img / 255, axis=0), dtype=tf.float32)
 
     style_model = ReCoNet()
     # loss_model = VGG16(weights="imagenet", classifier_activation=)
@@ -165,7 +222,7 @@ if __name__ == "__main__":
         mse_loss=mse_loss,
         sum_mse_loss=sum_mse_loss,
         optimizer=optimizer,
-        style_model=style_model,
+        reconet=style_model,
         norm_mean=cnn_normalization_mean,
         norm_std=cnn_normalization_std,
     )

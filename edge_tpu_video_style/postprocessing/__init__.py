@@ -1,1 +1,1 @@
-from edge_tpu_video_style.postprocessing import quantisation
+from postprocessing import quantisation
