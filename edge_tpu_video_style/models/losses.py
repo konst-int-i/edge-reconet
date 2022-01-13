@@ -181,7 +181,6 @@ def output_temporal_loss(
     output_diff = current_output_frame - warp_back(
         previous_output_frame, reverse_optical_flow
     )
-    print(input_diff.get_shape())
     # get rgb values from input_diff
     red_coef = 0.2126
     green_coef = 0.7152

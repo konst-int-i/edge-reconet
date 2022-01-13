@@ -44,7 +44,6 @@ class ConvolutionalLayer(tf.Module):
 
     def __call__(self, x):
         x = self.conv(x)
-        print(x.shape)
         return x
 
 
@@ -55,7 +54,6 @@ class ConvInstReLU(ConvolutionalLayer):
         self.relu = activations.relu
 
     def __call__(self, x):
-        # print(x)
         x = super(ConvInstReLU, self).__call__(x)
         x = self.inst(x)
         x = self.relu(x)
@@ -69,7 +67,6 @@ class ResBlock(tf.Module):
         self.instnorm = tfa.layers.InstanceNormalization()
         self.relu = activations.relu
 
-    # def forward(self, x):
     def __call__(self, x):
         res = x
         x = self.relu(self.instnorm(self.conv(x)))
@@ -122,7 +119,6 @@ if __name__ == "__main__":
     input_np = input_pt.numpy()
     input = tf.convert_to_tensor(input_np)
     x = tf.transpose(input, (0, 3, 2, 1))
-    # print(input.shape)
     # test convlayer
     model = ReCoNet()
     feat, x = model(x)

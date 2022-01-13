@@ -124,7 +124,10 @@ def train_step(args, sample, style, reconet, vgg):
 
 
 def train_loop(args, train_data, optimizer, style, reconet, vgg) -> ReCoNet:
+
     epochs = 1 if args.debug else args.epochs
+    print(f"{epochs=}")
+
     for epoch in range(epochs):
         data_bar = tqdm(train_data)
         for id, sample in enumerate(data_bar):

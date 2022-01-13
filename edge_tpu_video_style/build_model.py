@@ -94,7 +94,6 @@ def train_legacy(
                     feat_previous.get_shape()[1],
                     feat_previous.get_shape()[2],
                 )
-                print(f"resizing to {feat_map_size}")
                 rev_optical_flow_resized = tf.image.resize(
                     images=flow, size=feat_map_size
                 )
@@ -107,10 +106,6 @@ def train_legacy(
                 )
 
                 # ReCoNetLoss()
-                print(f"feat2 shape: ", feat_current.get_shape())
-                print(f"feat1_flow shape: ", rev_optical_flow_resized.get_shape())
-                print(f"feat1_warp_shape: ", feat_previous_inv_warp.get_shape())
-                print(f"Mask boundary_img1: ", transition_mask_boundary.get_shape())
                 occlusion_mask_resized = calculate_luminance_mask(
                     feat_previous_inv_warp, feat_current, occlusion_mask_resized
                 )
@@ -122,7 +117,6 @@ def train_legacy(
                     reverse_optical_flow=rev_optical_flow_resized,
                     occlusion_mask=occlusion_mask_resized,
                 )
-                print("Temporal feature loss", temp_feature_loss)
 
                 # get output temporal loss
                 temp_ouptput_loss = output_temporal_loss(
@@ -133,7 +127,6 @@ def train_legacy(
                     reverse_optical_flow=flow,
                     occlusion_mask=mask,
                 )
-                print("Temporal output loss", temp_ouptput_loss)
 
                 # get content feature maps
                 # normalize
@@ -191,7 +184,6 @@ if __name__ == "__main__":
     style_img = tf.convert_to_tensor(style_img)
     style_img = tf.transpose(style_img, (1, 0, 2))
     style_img = tf.cast(tf.expand_dims(style_img / 255, axis=0), dtype=tf.float32)
-    print("Style img", style_img.shape)
 
     style_model = ReCoNet()
     # loss_model = VGG16(weights="imagenet", classifier_activation=)
