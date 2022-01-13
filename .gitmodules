@@ -1,0 +1,3 @@
+[submodule "pomls-writeup"]
+	path = pomls-writeup
+	url = git@github.com:handcrushedbyamallet/pomls-writeup.git
