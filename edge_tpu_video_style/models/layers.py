@@ -8,10 +8,12 @@ class InstanceNorm(layers.Layer):
     def __init__(self):
         super().__init__()
 
-    def call(self, x):
+    def __call__(self, x):
         mean = tf.math.reduce_mean(x, axis=(1, 2), keepdims=True)
         recip_stdev = tf.math.rsqrt(
-            tf.math.reduce_sum(tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True)
+            tf.math.reduce_sum(
+                tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True
+            )
             / (216 * 512)
         )
         normed = tf.multiply(tf.math.subtract(x, mean), recip_stdev)
@@ -24,7 +26,7 @@ class Normalization(layers.Layer):
         self.mean = tf.reshape(mean, (1, 1, -1))
         self.std = tf.reshape(std, (1, 1, -1))
 
-    def call(self, img):
+    def __call__(self, img):
         return (img - self.mean) / self.std
 
 
@@ -32,7 +34,7 @@ class ReconetNorm(layers.Layer):
     def __init__(self):
         super(ReconetNorm, self).__init__()
 
-    def call(self, img):
+    def __call__(self, img):
         return (img * 2) - 1
 
 
@@ -40,7 +42,7 @@ class ReconetUnnorm(layers.Layer):
     def __init__(self):
         super(ReconetUnnorm, self).__init__()
 
-    def call(self, img):
+    def __call__(self, img):
         return (img + 1) / 2
 
 
@@ -51,7 +53,7 @@ class ConvolutionalLayer(layers.Layer):
             out_channels, kernel_size, strides=stride, use_bias=bias, padding="same"
         )
 
-    def call(self, x):
+    def __call__(self, x):
         x = self.conv(x)
         return x
 
@@ -63,8 +65,8 @@ class ConvInstReLU(ConvolutionalLayer):
         # self.inst = tfa.layers.InstanceNormalization()
         self.relu = activations.relu
 
-    def call(self, x):
-        x = super(ConvInstReLU, self).call(x)
+    def __call__(self, x):
+        x = super(ConvInstReLU, self).__call__(x)
         x = self.inst(x)
         x = self.relu(x)
         return x
@@ -79,7 +81,7 @@ class ResBlock(layers.Layer):
 
         self.relu = activations.relu
 
-    def call(self, x):
+    def __call__(self, x):
         res = x
         x = self.relu(self.inst(self.conv(x)))
         x = self.inst(self.conv(x))
