@@ -32,6 +32,7 @@ def vgg_prep(img):
 
 
 def vgg_postprocess(images):
+    # decode vgg image
     return [img / 255 for img in images]
 
 
@@ -63,7 +64,6 @@ def vgg_norm(image):
     return normalization(image)
 
 
-# @tf.function(autograph=True)
 def train_step(args, sample, style, reconet, vgg):
     loss_fn = ReCoNetLoss(
         args["ALPHA"],
@@ -98,7 +98,6 @@ def train_step(args, sample, style, reconet, vgg):
         )
 
         with tape.stop_recording():
-
             # Unonrmalize from reconet and apply VGG-specific norm
             current_vgg_out = call_vgg(unnorm(current_frame_output), vgg)
             previous_vgg_out = call_vgg(unnorm(previous_frame_output), vgg)
@@ -168,12 +167,13 @@ def main():
     train_dataset = train_dataset.batch(args.batch_size)
 
     optimizer = optimizers.Adamax(learning_rate=args.lr)
-
     # read & process style image
     style_img = read_style_image(args)
 
     reconet = ReCoNet()
     vgg = vgg_layers()
+
+    reconet.compile()
 
     trained_reconet = train_loop(
         args, train_dataset, optimizer, style_img, reconet, vgg
