@@ -4,6 +4,22 @@ from tensorflow.keras import activations
 import tensorflow_addons as tfa
 
 
+class InstanceNorm(layers.Layer):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, x):
+        mean = tf.math.reduce_mean(x, axis=(1, 2))
+        mean = tf.expand_dims(tf.expand_dims(mean, axis=1), axis=2)
+        recip_stdev = tf.math.rsqrt(
+            tf.math.reduce_sum(tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2))
+            / (216 * 512)
+        )
+        recip_stdev = tf.expand_dims(tf.expand_dims(recip_stdev, axis=1), axis=2)
+        normed = tf.multiply(tf.math.subtract(x, mean), recip_stdev)
+        return normed
+
+
 class Normalization(layers.Layer):
     def __init__(self, mean, std):
         super(Normalization, self).__init__()
@@ -45,6 +61,7 @@ class ConvolutionalLayer(layers.Layer):
 class ConvInstReLU(ConvolutionalLayer):
     def __init__(self, out_channels, kernel_size, stride):
         super(ConvInstReLU, self).__init__(out_channels, kernel_size, stride)
+        self.inst = InstanceNorm()
         self.inst = tfa.layers.InstanceNormalization()
         self.relu = activations.relu
 
@@ -59,13 +76,15 @@ class ResBlock(layers.Layer):
     def __init__(self, filters, kernel_size=3, stride=1, padding=1):
         super(ResBlock, self).__init__()
         self.conv = layers.Conv2D(filters, kernel_size, stride, padding="same")
-        self.instnorm = tfa.layers.InstanceNormalization()
+        self.inst = InstanceNorm()
+        # self.inst = tfa.layers.InstanceNormalization()
+
         self.relu = activations.relu
 
     def __call__(self, x):
         res = x
-        x = self.relu(self.instnorm(self.conv(x)))
-        x = self.instnorm(self.conv(x))
+        x = self.relu(self.inst(self.conv(x)))
+        x = self.inst(self.conv(x))
         x = res + x
         return x
 
