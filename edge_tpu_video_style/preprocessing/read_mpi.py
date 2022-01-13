@@ -108,7 +108,7 @@ def toString(num):
 def read_style_image(args):
     style_img = Image.open(args.style_name)
     style_img = style_img.resize((args.width, args.height), Image.BILINEAR)
-    style_img = tf.convert_to_tensor(style_img)
+    style_img = tf.convert_to_tensor(np.array(style_img))
     style_img = tf.transpose(style_img, (1, 0, 2))
     style_img = tf.cast(tf.expand_dims(style_img / 255, axis=0), dtype=tf.float32)
     return style_img
