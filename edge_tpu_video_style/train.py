@@ -17,13 +17,6 @@ from pathlib import Path
 from models.utils import warp_back, calculate_luminance_mask
 import numpy
 
-# config = tf.compat.v1.ConfigProto()
-# config.gpu_options.per_process_gpu_memory_fraction = (
-#     0.9  # 0.6 sometimes works better for folks
-# )
-# tf.compat.v1.keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
-
-
 # set seed for debugging
 tf.random.set_seed(1)
 numpy.random.seed(1)
@@ -165,7 +158,7 @@ def main():
     train_data = MPIDataSet(Path(args.path).joinpath("training"), args)
 
     # convert to tf dataset & batch
-    signature = (tf.float32, tf.float32, tf.float32, tf.float32)
+    signature = (tf.float16, tf.float16, tf.float16, tf.float16)
     train_dataset = Dataset.from_generator(
         train_data, output_types=signature, name="train"
     )
