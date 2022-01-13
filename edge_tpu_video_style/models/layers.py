@@ -8,7 +8,7 @@ class InstanceNorm(layers.Layer):
     def __init__(self):
         super().__init__()
 
-    def __call__(self, x):
+    def call(self, x):
         mean = tf.math.reduce_mean(x, axis=(1, 2))
         mean = tf.expand_dims(tf.expand_dims(mean, axis=1), axis=2)
         recip_stdev = tf.math.rsqrt(
@@ -26,7 +26,7 @@ class Normalization(layers.Layer):
         self.mean = tf.reshape(mean, (1, 1, -1))
         self.std = tf.reshape(std, (1, 1, -1))
 
-    def __call__(self, img):
+    def call(self, img):
         return (img - self.mean) / self.std
 
 
@@ -34,7 +34,7 @@ class ReconetNorm(layers.Layer):
     def __init__(self):
         super(ReconetNorm, self).__init__()
 
-    def __call__(self, img):
+    def call(self, img):
         return (img * 2) - 1
 
 
@@ -42,7 +42,7 @@ class ReconetUnnorm(layers.Layer):
     def __init__(self):
         super(ReconetUnnorm, self).__init__()
 
-    def __call__(self, img):
+    def call(self, img):
         return (img + 1) / 2
 
 
@@ -53,7 +53,7 @@ class ConvolutionalLayer(layers.Layer):
             out_channels, kernel_size, strides=stride, use_bias=bias, padding="same"
         )
 
-    def __call__(self, x):
+    def call(self, x):
         x = self.conv(x)
         return x
 
@@ -65,8 +65,8 @@ class ConvInstReLU(ConvolutionalLayer):
         self.inst = tfa.layers.InstanceNormalization()
         self.relu = activations.relu
 
-    def __call__(self, x):
-        x = super(ConvInstReLU, self).__call__(x)
+    def call(self, x):
+        x = super(ConvInstReLU, self).call(x)
         x = self.inst(x)
         x = self.relu(x)
         return x
@@ -81,7 +81,7 @@ class ResBlock(layers.Layer):
 
         self.relu = activations.relu
 
-    def __call__(self, x):
+    def call(self, x):
         res = x
         x = self.relu(self.inst(self.conv(x)))
         x = self.inst(self.conv(x))
