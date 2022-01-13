@@ -3,7 +3,7 @@ import os.path
 import tensorflow as tf
 from tensorflow.data import Dataset
 
-from edge_tpu_video_style.preprocessing.read_mpi import read_style_image
+from preprocessing.read_mpi import read_style_image
 import tensorflow as tf
 from models.layers import ReCoNet, ReconetNorm, ReconetUnnorm
 from preprocessing import MPIDataSet
