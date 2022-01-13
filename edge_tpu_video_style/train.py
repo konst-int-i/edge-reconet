@@ -133,8 +133,7 @@ def train_loop(args, train_data, optimizer, style, reconet, vgg) -> ReCoNet:
     for epoch in range(epochs):
         data_bar = tqdm(train_data)
         for id, sample in enumerate(data_bar):
-            # if args.debug and id == 2:
-            if id == 2:
+            if args.debug and id == 2:
                 break
             print(f"Epoch {epoch+1}/{epochs} ; Sample {id+1}")
 
