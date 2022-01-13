@@ -63,13 +63,19 @@ class MPIDataSet:
 
                 flow = readFlow(str(flowpath.joinpath(f"frame_{num1}.flo")))
 
-                img1 = tf.convert_to_tensor(img1, dtype=tf.float32) / float_conv_factor
+                img1 = (
+                    tf.convert_to_tensor(np.array(img1), dtype=tf.float32)
+                    / float_conv_factor
+                )
                 img1 = tf.transpose(img1, (1, 0, 2))
-                img2 = tf.convert_to_tensor(img2, dtype=tf.float32) / float_conv_factor
+                img2 = (
+                    tf.convert_to_tensor(np.array(img2), dtype=tf.float32)
+                    / float_conv_factor
+                )
                 img2 = tf.transpose(img2, (1, 0, 2))
                 h, w, c = flow.shape
 
-                flow = tf.convert_to_tensor(flow, dtype=tf.float32)
+                flow = tf.convert_to_tensor(np.array(flow), dtype=tf.float32)
                 flow = tf.transpose(flow, (1, 0, 2))
                 flow = tf.image.resize(
                     images=flow, size=(self.args.width, self.args.height)
@@ -86,7 +92,7 @@ class MPIDataSet:
                 mask = 1 - mask
                 mask = np.where((mask < 0.99), 0.0, 1.0)
                 # now convert to tensor
-                mask = tf.convert_to_tensor(mask, dtype=tf.float32)
+                mask = tf.convert_to_tensor(np.array(mask), dtype=tf.float32)
                 mask = tf.expand_dims(mask, axis=0)
                 mask = tf.transpose(mask, (2, 1, 0))
                 break
