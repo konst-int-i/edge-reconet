@@ -2,8 +2,7 @@ import tensorflow as tf
 from tensorflow.data import Dataset
 
 from edge_tpu_video_style.preprocessing.read_mpi import read_style_image
-
-# from models.reconet import make_reconet
+import tensorflow as tf
 from models.layers import ReCoNet, ReconetNorm, ReconetUnnorm
 from preprocessing import MPIDataSet
 from tensorflow.keras import optimizers
@@ -12,7 +11,6 @@ from models.layers import Normalization
 from models.losses import ReCoNetLoss, gram_matrix
 from utils.parser import parser
 from tensorflow.keras.applications.vgg16 import preprocess_input
-
 
 from pathlib import Path
 
@@ -44,7 +42,6 @@ def vgg_layers():
         "block2_conv1",
         "block3_conv1",
         "block4_conv1",
-        # 'block5_conv1',
     ]
 
     # Load our model. Load pretrained VGG, trained on imagenet data
@@ -61,7 +58,7 @@ def vgg_norm(image):
     return normalization(image)
 
 
-# @tf.function
+# @tf.function(autograph=True)
 def train_step(args, sample, style, reconet, vgg):
     loss_fn = ReCoNetLoss(
         args["ALPHA"],
@@ -123,7 +120,6 @@ def train_step(args, sample, style, reconet, vgg):
     print(loss_fn)
 
     gradients = tape.gradient(loss, reconet.trainable_weights)
-
     return (gradients, reconet.trainable_weights)
 
 
