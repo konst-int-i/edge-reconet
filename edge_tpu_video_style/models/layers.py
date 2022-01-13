@@ -9,13 +9,11 @@ class InstanceNorm(layers.Layer):
         super().__init__()
 
     def call(self, x):
-        mean = tf.math.reduce_mean(x, axis=(1, 2))
-        mean = tf.expand_dims(tf.expand_dims(mean, axis=1), axis=2)
+        mean = tf.math.reduce_mean(x, axis=(1, 2), keepdims=True)
         recip_stdev = tf.math.rsqrt(
-            tf.math.reduce_sum(tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2))
+            tf.math.reduce_sum(tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True)
             / (216 * 512)
         )
-        recip_stdev = tf.expand_dims(tf.expand_dims(recip_stdev, axis=1), axis=2)
         normed = tf.multiply(tf.math.subtract(x, mean), recip_stdev)
         return normed
 
@@ -62,7 +60,7 @@ class ConvInstReLU(ConvolutionalLayer):
     def __init__(self, out_channels, kernel_size, stride):
         super(ConvInstReLU, self).__init__(out_channels, kernel_size, stride)
         self.inst = InstanceNorm()
-        self.inst = tfa.layers.InstanceNormalization()
+        # self.inst = tfa.layers.InstanceNormalization()
         self.relu = activations.relu
 
     def call(self, x):
