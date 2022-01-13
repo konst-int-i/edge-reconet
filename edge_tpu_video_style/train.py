@@ -1,3 +1,5 @@
+import os.path
+
 import tensorflow as tf
 from tensorflow.data import Dataset
 
@@ -11,10 +13,13 @@ from models.layers import Normalization
 from models.losses import ReCoNetLoss, gram_matrix, ReCoNetLossMetric
 from utils.parser import parser
 from tensorflow.keras.applications.vgg16 import preprocess_input
-
 from pathlib import Path
-
 from models.utils import warp_back, calculate_luminance_mask
+import numpy
+
+# set seed for debugging
+tf.random.set_seed(1)
+numpy.random.seed(1)
 
 
 NORM_MEAN = tf.constant([0.485, 0.456, 0.406])
@@ -174,7 +179,11 @@ def main():
         args, train_dataset, optimizer, style_img, reconet, vgg
     )
 
-    trained_reconet.save(f"saved_models/{args.model_name}")
+    save_dir = "saved_models/"
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    trained_reconet.save(f"{save_dir}/{args.model_name}")
 
 
 if __name__ == "__main__":
