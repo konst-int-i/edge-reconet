@@ -1,6 +1,7 @@
+import keras.metrics
 import tensorflow as tf
 from dataclasses import dataclass
-
+from typing import *
 from typing import Iterable
 from models.utils import warp_back, get_luminance_grayscale, calculate_luminance_mask
 
@@ -37,7 +38,7 @@ class ReCoNetLoss:
         previous_feature_maps,
         reverse_optical_flow,
         occlusion_mask,
-    ) -> float:
+    ) -> List[str]:
         """Calculate the full loss for the ReCoNet model
 
         Args:
@@ -100,15 +101,13 @@ class ReCoNetLoss:
         self._feature_temporal_loss = feature_temporal_loss_
         self._output_temporal_loss = output_temporal_loss_
 
-        return sum(
-            [
-                content_loss_,
-                style_loss_,
-                total_variation_,
-                feature_temporal_loss_,
-                output_temporal_loss_,
-            ]
-        )
+        return [
+            content_loss_,
+            style_loss_,
+            total_variation_,
+            feature_temporal_loss_,
+            output_temporal_loss_,
+        ]
 
     def __repr__(self):
         loss_str = f"""{self._content_loss=}, 
@@ -117,6 +116,43 @@ class ReCoNetLoss:
                        {self._feature_temporal_loss=},
                        {self._output_temporal_loss=}"""
         return loss_str
+
+
+class ReCoNetLossMetric(tf.keras.metrics.Metric):
+    """ """
+
+    def __init__(self):
+        super(ReCoNetLossMetric, self).__init__()
+        self.reset_states()
+
+    def result(self):
+        loss_str = f"""{self.content_loss=}, 
+                               {self.style_loss=}, 
+                               {self.total_variation=}, 
+                               {self.feature_temporal_loss=},
+                               {self.output_temporal_loss=}"""
+        print(loss_str)
+        return [
+            self.content_loss,
+            self.style_loss,
+            self.total_variation,
+            self.feature_temporal_loss,
+            self.output_temporal_loss,
+        ]
+
+    def update_state(self, losses: List[str]):
+        self.content_loss = losses[0]
+        self.style_loss = losses[1]
+        self.total_variation = losses[2]
+        self.feature_temporal_loss = losses[3]
+        self.output_temporal_loss = losses[4]
+
+    def reset_states(self):
+        self.content_loss = 0
+        self.style_loss = 0
+        self.total_variation = 0
+        self.feature_temporal_loss = 0
+        self.output_temporal_loss = 0
 
 
 def gram_matrix(layer):

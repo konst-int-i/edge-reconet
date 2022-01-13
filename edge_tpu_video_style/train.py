@@ -8,7 +8,7 @@ from preprocessing import MPIDataSet
 from tensorflow.keras import optimizers
 from tqdm import tqdm
 from models.layers import Normalization
-from models.losses import ReCoNetLoss, gram_matrix
+from models.losses import ReCoNetLoss, gram_matrix, ReCoNetLossMetric
 from utils.parser import parser
 from tensorflow.keras.applications.vgg16 import preprocess_input
 
@@ -101,7 +101,7 @@ def train_step(args, sample, style, reconet, vgg):
             previous_vgg_in = call_vgg(previous_frame, vgg)
             style_gram_matrices = [gram_matrix(x) for x in call_vgg(style, vgg)]
 
-        loss = loss_fn(
+        losses = loss_fn(
             current_vgg_out=current_vgg_out,
             current_vgg_in=current_vgg_in,
             previous_vgg_out=previous_vgg_out,
@@ -115,30 +115,36 @@ def train_step(args, sample, style, reconet, vgg):
             reverse_optical_flow=flow,  # Also unsure
             occlusion_mask=occlusion_mask,  # Unsure?
         )
+        # combine loss elements
+        loss = sum(losses)
 
     print(f"{loss=}")
-    print(loss_fn)
+    # print(loss_fn)
 
     gradients = tape.gradient(loss, reconet.trainable_weights)
-    return (gradients, reconet.trainable_weights)
+    return (gradients, reconet.trainable_weights, losses)
 
 
 def train_loop(args, train_data, optimizer, style, reconet, vgg) -> ReCoNet:
 
     epochs = 1 if args.debug else args.epochs
-    print(f"{epochs=}")
+    loss_metric = ReCoNetLossMetric()
 
     for epoch in range(epochs):
         data_bar = tqdm(train_data)
         for id, sample in enumerate(data_bar):
-
-            if args.debug and id == 2:
+            # if args.debug and id == 2:
+            if id == 2:
                 break
+            print(f"Epoch {epoch+1}/{epochs} ; Sample {id+1}")
 
-            gradients, reconet_vars = train_step(
+            gradients, reconet_vars, losses = train_step(
                 vars(args), sample, style, reconet, vgg
             )
             optimizer.apply_gradients(zip(gradients, reconet_vars))
+
+        loss_metric.update_state(losses)
+        loss_metric.result()
 
     return reconet
 
