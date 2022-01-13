@@ -17,7 +17,7 @@ from pathlib import Path
 from models.utils import warp_back, calculate_luminance_mask
 import numpy
 
-config = tf.ConfigProto()
+config = tf.compat.v1.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = (
     0.9  # 0.6 sometimes works better for folks
 )
