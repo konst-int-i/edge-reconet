@@ -64,7 +64,13 @@ def vgg_norm(image):
 # @tf.function
 def train_step(args, sample, style, reconet, vgg):
     loss_fn = ReCoNetLoss(
-        args["ALPHA"], args["BETA"], args["GAMMA"], args["LAMBDA_F"], args["LAMBDA_O"]
+        args["ALPHA"],
+        args["BETA"],
+        args["GAMMA"],
+        args["LAMBDA_F"],
+        args["LAMBDA_O"],
+        args["temp_output_scale"],
+        args["temp_feature_scale"],
     )
     norm = ReconetNorm()
     unnorm = ReconetUnnorm()
@@ -140,6 +146,7 @@ def train_loop(args, train_data, optimizer, style, reconet, vgg) -> ReCoNet:
 
 
 def main():
+    # Load in MPI train data
     args = parser.parse_args()
     train_data = MPIDataSet(Path(args.path).joinpath("training"), args)
 
@@ -148,9 +155,9 @@ def main():
     train_dataset = Dataset.from_generator(
         train_data, output_types=signature, name="train"
     )
+
     # might want to shuffle, but slow for debugging
     train_dataset = train_dataset.batch(args.batch_size)
-    print(type(args))
 
     optimizer = optimizers.Adamax(learning_rate=args.lr)
 

@@ -14,6 +14,8 @@ class ReCoNetLoss:
     gamma: float
     lambda_f: float
     lambda_o: float
+    temp_output_scale: float
+    temp_feat_scale: float
 
     _content_loss: float = 0.0
     _style_loss: float = 0.0
@@ -68,20 +70,28 @@ class ReCoNetLoss:
             current_output_frame
         ) + self.gamma * total_variation(previous_output_frame)
 
-        feature_temporal_loss_ = self.lambda_f * feature_temporal_loss(
-            current_feature_maps,
-            previous_feature_maps,
-            reverse_optical_flow,
-            occlusion_mask,
+        feature_temporal_loss_ = (
+            self.lambda_f
+            * self.temp_feat_scale
+            * feature_temporal_loss(
+                current_feature_maps,
+                previous_feature_maps,
+                reverse_optical_flow,
+                occlusion_mask,
+            )
         )
 
-        output_temporal_loss_ = self.lambda_o * output_temporal_loss(
-            current_input_frame,
-            previous_input_frame,
-            current_output_frame,
-            previous_output_frame,
-            reverse_optical_flow,
-            occlusion_mask,
+        output_temporal_loss_ = (
+            self.lambda_o
+            * self.temp_output_scale
+            * output_temporal_loss(
+                current_input_frame,
+                previous_input_frame,
+                current_output_frame,
+                previous_output_frame,
+                reverse_optical_flow,
+                occlusion_mask,
+            )
         )
 
         self._content_loss = content_loss_
@@ -107,14 +117,6 @@ class ReCoNetLoss:
                        {self._feature_temporal_loss=},
                        {self._output_temporal_loss=}"""
         return loss_str
-
-
-# def gram_matrix(input_tensor):
-#     result = tf.linalg.einsum("bijc,bijd->bcd", input_tensor, input_tensor)
-#     input_shape = tf.shape(input_tensor)
-#     num_locations = tf.cast(input_shape[1] * input_shape[2], tf.float32)
-#     # TODO - check if these are the right shapes?
-#     return result / (num_locations)
 
 
 def gram_matrix(layer):

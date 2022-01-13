@@ -25,6 +25,18 @@ parser.add_argument(
 parser.add_argument("--BETA", type=float, default=1e5, help="style_loss hyperparameter")
 parser.add_argument("--GAMMA", type=float, default=1e-6, help="reg_loss hyperparameter")
 parser.add_argument(
+    "--temp_output_scale",
+    type=float,
+    default=2e-3,
+    help="temporal output loss scale factor",
+)
+parser.add_argument(
+    "--temp_feature_scale",
+    type=float,
+    default=1e-3,
+    help="temporal feature loss scale factor",
+)
+parser.add_argument(
     "--style-name",
     type=str,
     default="data/style_images/flower.jpeg",
