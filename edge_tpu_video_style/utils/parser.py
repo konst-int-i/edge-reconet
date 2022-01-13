@@ -56,3 +56,4 @@ parser.add_argument(
     default="reconet_model",
     help="Folder name in `saved_models/` folder",
 )
+parser.add_argument("--debug", type=bool, default=False, help="Running in debug mode")
