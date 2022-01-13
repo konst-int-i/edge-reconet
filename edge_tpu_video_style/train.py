@@ -70,7 +70,7 @@ def train_step(args, sample, style, reconet, vgg):
     unnorm = ReconetUnnorm()
 
     with tf.GradientTape() as tape:
-        tape.watch(reconet.variables)
+        tape.watch(reconet.trainable_weights)
 
         current_frame, previous_frame, flow, motion_boundaries = sample
         inverse_warp, reverse_motion_boundaries = warp_back(current_frame, flow)
@@ -116,21 +116,12 @@ def train_step(args, sample, style, reconet, vgg):
     print(f"{loss=}")
     print(loss_fn)
 
-    gradients = tape.gradient(loss, reconet.variables)
-    # [current_frame, previous_frame, motion_boundaries, flow]
-    # )
+    gradients = tape.gradient(loss, reconet.trainable_weights)
 
-    # print(f"{gradients=}")
-
-    return gradients
+    return (gradients, reconet.trainable_weights)
 
 
-# @tf.function
-# def predict():
-#     with tf.GradientTape() as tape:
-
-
-def train_loop(args, train_data, optimizer, style, reconet, vgg):
+def train_loop(args, train_data, optimizer, style, reconet, vgg) -> ReCoNet:
 
     # for epoch in args.epochs:
     for epoch in range(1):
@@ -140,9 +131,12 @@ def train_loop(args, train_data, optimizer, style, reconet, vgg):
             if id == 2:
                 break
 
-            gradients = train_step(vars(args), sample, style, reconet, vgg)
-            # print(gradients)
-            optimizer.apply_gradients(gradients)
+            gradients, reconet_vars = train_step(
+                vars(args), sample, style, reconet, vgg
+            )
+            optimizer.apply_gradients(zip(gradients, reconet_vars))
+
+    return reconet
 
 
 def main():
@@ -163,22 +157,14 @@ def main():
     # read & process style image
     style_img = read_style_image(args)
 
-    #
-    # im1 = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 3))
-    # im2 = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 3))
-    # flow = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 2))
-    # mask = tf.where(
-    #     tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 1)) > 0.5,
-    #     1., 0.)
-    #
-    # style = tf.random.uniform(minval=0, maxval=1, shape=(4, 512, 216, 3))
-
     reconet = ReCoNet()
     vgg = vgg_layers()
 
-    # sample = (im1, im2, flow, mask)
-    # train_step(sample, style, reconet, vgg, args)
-    train_loop(args, train_dataset, optimizer, style_img, reconet, vgg)
+    trained_reconet = train_loop(
+        args, train_dataset, optimizer, style_img, reconet, vgg
+    )
+
+    trained_reconet.save(f"saved_models/{args.model_name}")
 
 
 if __name__ == "__main__":
