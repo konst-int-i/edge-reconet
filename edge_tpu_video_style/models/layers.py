@@ -109,7 +109,7 @@ class ReCoNet(tf.keras.Model):
         x = self.conv_inst_relu2(x)
         x = self.conv_inst_relu3(x)
 
-        for _ in range(5):
+        for _ in range(1):
             x = self.residual_block(x)
 
         feat_map = x

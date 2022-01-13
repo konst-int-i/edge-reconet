@@ -5,11 +5,6 @@ import tensorflow_addons as tfa
 from typing import Tuple
 
 
-def save_model(quantised, name="style_transfer.tflite"):
-    with open(f"saved_models/{name}", "wb") as f:
-        f.write(quantised)
-
-
 def warp_back(image: tf.Tensor, flow: tf.Tensor) -> Tuple[tf.Tensor]:
     """Calculates the inverse warping from frame t to frame t - 1
     TODO: Test this method!
