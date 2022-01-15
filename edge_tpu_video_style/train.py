@@ -6,6 +6,7 @@ from tensorflow.data import Dataset
 from preprocessing.read_mpi import read_style_image
 import tensorflow as tf
 from models.layers import ReCoNet, ReconetNorm, ReconetUnnorm
+from models.reconet import build_reconet
 from preprocessing import MPIDataSet
 from tensorflow.keras import optimizers
 from tqdm import tqdm
@@ -186,6 +187,7 @@ def main():
     print(style_img)
 
     reconet = ReCoNet()
+    reconet = build_reconet()
     vgg = vgg_layers()
 
     reconet.compile()

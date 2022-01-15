@@ -106,9 +106,9 @@ class ReCoNetLoss:
         return [
             content_loss_,
             style_loss_,
-            # total_variation_,
-            # feature_temporal_loss_,
-            # output_temporal_loss_,
+            total_variation_,
+            feature_temporal_loss_,
+            output_temporal_loss_,
         ]
 
     def __repr__(self):
