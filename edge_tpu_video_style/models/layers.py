@@ -2,30 +2,18 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras import activations
 import tensorflow_addons as tfa
-from tensorflow.keras.layers import Normalization as IN
-from tensorflow.keras.layers import LayerNormalization
 
-InstanceNorm = lambda: LayerNormalization(
-    axis=(1, 2),
-    epsilon=0.001,
-    center=False,
-    scale=False,
-    beta_initializer="zeros",
-    gamma_initializer="ones",
-)
 
 def bootleg_init(shape, dtype=None):
     init = tf.ones(shape, dtype=dtype)
     init /= shape[0] * shape[1]
     return init
 
-def my_init(shape, dtype=None):
-    return tf.random.normal(shape, dtype=dtype)
 
 class BootlegInstanceNorm(layers.Layer):
-    def __init__(self, out_channels, input_size):
+    def __init__(self, out_channels):
         super().__init__()
-        kernel_size = (input_size[0] // 2, input_size[1] // 2)
+        kernel_size = (30, 30)
         self.conv = layers.Conv2D(
             out_channels, kernel_size=kernel_size, strides=1, use_bias=False, padding="same",
             trainable=False, kernel_initializer=bootleg_init
@@ -90,18 +78,14 @@ class ConvolutionalLayer(layers.Layer):
 
 
 class ConvInstReLU(ConvolutionalLayer):
-    def __init__(self, out_channels, kernel_size, stride, input_size=None):
+    def __init__(self, out_channels, kernel_size, stride):
         super(ConvInstReLU, self).__init__(out_channels, kernel_size, stride)
-        # self.inst = InstanceNorm()
-        # self.inst = tfa.layers.InstanceNormalization()
-        # self.inst = MinMaxPort()
-        # self.inst = InstanceNorm()
-        #self.inst = BootlegInstanceNorm(out_channels, input_size)
+        self.inst = BootlegInstanceNorm(out_channels)
         self.relu = activations.relu
 
     def call(self, x):
         x = super(ConvInstReLU, self).call(x)
-        # x = self.inst(x)
+        x = self.inst(x)
         x = self.relu(x)
         return x
 
@@ -110,12 +94,7 @@ class ResBlock(layers.Layer):
     def __init__(self, filters, kernel_size=3, stride=1, padding=1):
         super(ResBlock, self).__init__()
         self.conv = layers.Conv2D(filters, kernel_size, stride, padding="same")
-        #self.inst = InstanceNorm()
-        # self.inst = tfa.layers.InstanceNormalization()
-        # self.inst = MinMaxPort()
-        # self.inst = LayerNormalization()
-        #self.inst = BootlegInstanceNorm(input_size, out_channels)
-        self.inst = BootlegInstanceNorm(filters, (128, 54))
+        self.inst = BootlegInstanceNorm(filters)
         self.relu = activations.relu
 
     def call(self, x):
@@ -143,9 +122,9 @@ class MinMaxPort(layers.Layer):
 class ReCoNet(tf.keras.Model):
     def __init__(self):
         super(ReCoNet, self).__init__()
-        self.conv_inst_relu1 = ConvInstReLU(32, 9, 1, (512, 216))
-        self.conv_inst_relu2 = ConvInstReLU(64, 3, 2, (256, 108))
-        self.conv_inst_relu3 = ConvInstReLU(128, 3, 2, (128, 54))
+        self.conv_inst_relu1 = ConvInstReLU(32, 9, 1)
+        self.conv_inst_relu2 = ConvInstReLU(64, 3, 2)
+        self.conv_inst_relu3 = ConvInstReLU(128, 3, 2)
 
         self.residual_block = ResBlock(128)
 
