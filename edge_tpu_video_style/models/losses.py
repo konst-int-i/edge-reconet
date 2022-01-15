@@ -59,8 +59,8 @@ class ReCoNetLoss:
             float: The loss for the reconet model
         """
 
-        self.temp_feat_scale = 0
-        self.temp_output_scale = 0
+        self.temp_feat_scale = 1
+        self.temp_output_scale = 1
         content_loss_ = self.alpha * content_loss(
             current_vgg_out[2], current_vgg_in[2]
         ) + self.alpha * content_loss(previous_vgg_out[2], current_vgg_out[2])
@@ -102,6 +102,7 @@ class ReCoNetLoss:
         self._total_variation = total_variation_
         self._feature_temporal_loss = feature_temporal_loss_
         self._output_temporal_loss = output_temporal_loss_
+        print(self)
 
         return [
             content_loss_,
@@ -175,8 +176,6 @@ def content_loss(content_feature_maps, style_feature_maps):
 
 
 def style_loss(content_feature_maps, style_gram_matrices):
-    print(content_feature_maps)
-    print(style_gram_matrices)
     return tf.reduce_sum(
         [
             tf.reduce_mean(tf.math.square(gram_matrix(content) - style))

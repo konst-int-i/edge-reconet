@@ -92,12 +92,10 @@ def train_step(args, sample, style, reconet, vgg):
         current_frame_features, current_frame_output = reconet(norm(current_frame))
         previous_frame_features, previous_frame_output = reconet(norm(previous_frame))
 
-        print(current_frame_output.numpy()[1, :, :, :])
         fig, ax = plt.subplots(2, 1)
-        ax[0].imshow(current_frame_output.numpy()[0, :, :, :])#.reshape(216, 512, 3))
-        ax[1].imshow(current_frame.numpy()[0, :, :, :])
+        ax[0].imshow(tf.transpose(current_frame_output, (0, 2, 1, 3)).numpy()[0, :, :, :])#.reshape(216, 512, 3))
+        ax[1].imshow(tf.transpose(current_frame, (0, 2, 1, 3)).numpy()[0, :, :, :])
         plt.show()
-        print(current_frame_output)
 
         _, feature_width, feature_height, _ = current_frame_features.shape
         current_feature_flow = tf.image.resize(
