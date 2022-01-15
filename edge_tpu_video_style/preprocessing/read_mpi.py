@@ -46,12 +46,11 @@ class MPIDataSet:
         if self.total == self.max:
             raise StopIteration
 
-        if self.file_idx == (self.samples_in_dirs[self.dir_idx]):
+        if self.file_idx == (self.samples_in_dirs[self.dir_idx] - 1):
             self.file_idx = 0
             self.dir_idx += 1
 
         float_conv_factor = 255
-        print(self.__len__())
         # gets the current self.idx element and increments the index
         folder = self.directories[self.dir_idx]
         path = self.path.joinpath("clean").joinpath(folder)
