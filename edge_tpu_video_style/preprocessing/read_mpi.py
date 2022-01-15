@@ -43,7 +43,7 @@ class MPIDataSet:
         idx must be between 0 to len-1
         assuming flow[0] contains flow in x direction and flow[1] contains flow in y
         """
-        if self.file_idx == self.max:
+        if self.total == self.max:
             raise StopIteration
 
         if self.file_idx == (self.samples_in_dirs[self.dir_idx]):
@@ -100,6 +100,7 @@ class MPIDataSet:
 
         # increment file index
         self.file_idx += 1
+        self.total += 1
         return (img1, img2, flow, mask)
 
     def __call__(self, *args, **kwargs):
