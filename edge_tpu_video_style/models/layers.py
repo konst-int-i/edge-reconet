@@ -15,8 +15,13 @@ class BootlegInstanceNorm(layers.Layer):
         super().__init__()
         kernel_size = (30, 30)
         self.conv = layers.Conv2D(
-            out_channels, kernel_size=kernel_size, strides=1, use_bias=False, padding="same",
-            trainable=False, kernel_initializer=bootleg_init
+            out_channels,
+            kernel_size=kernel_size,
+            strides=1,
+            use_bias=False,
+            padding="same",
+            trainable=False,
+            kernel_initializer=bootleg_init,
         )
         self.trainable = False
 
@@ -28,7 +33,7 @@ class BootlegInstanceNorm(layers.Layer):
 # class InstanceNorm(layers.Layer):
 #     def __init__(self):
 #         super().__init__()
-# 
+#
 #     def call(self, x):
 #         mean = tf.math.reduce_mean(x, axis=(1, 2), keepdims=True)
 #         recip_stdev = tf.math.rsqrt(
