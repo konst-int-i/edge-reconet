@@ -85,12 +85,13 @@ class ConvolutionalLayer(layers.Layer):
 class ConvInstReLU(ConvolutionalLayer):
     def __init__(self, out_channels, kernel_size, stride):
         super(ConvInstReLU, self).__init__(out_channels, kernel_size, stride)
-        self.inst = BootlegInstanceNorm(out_channels)
+        # self.inst = BootlegInstanceNorm(out_channels)
+        self.inst = tfa.layers.InstanceNormalization()
         self.relu = activations.relu
 
     def call(self, x):
         x = super(ConvInstReLU, self).call(x)
-        # x = self.inst(x)
+        x = self.inst(x)
         x = self.relu(x)
         return x
 
@@ -99,15 +100,16 @@ class ResBlock(layers.Layer):
     def __init__(self, filters, kernel_size=3, stride=1, padding=1):
         super(ResBlock, self).__init__()
         self.conv = layers.Conv2D(filters, kernel_size, stride, padding="same")
-        self.inst = BootlegInstanceNorm(filters)
+        # self.inst = BootlegInstanceNorm(filters)
+        self.inst = tfa.layers.InstanceNormalization()
         self.relu = activations.relu
 
     def call(self, x):
         res = x
-        #x = self.relu(self.inst(self.conv(x)))
-        x = self.relu(self.conv(x))  # Added this
-        # x = self.inst(self.conv(x))
-        x = self.conv(x) # Added this
+        x = self.relu(self.inst(self.conv(x)))
+        # x = self.relu(self.conv(x))  # Added this
+        x = self.inst(self.conv(x))
+        # x = self.conv(x) # Added this
         x = res + x
         return x
 

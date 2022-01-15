@@ -17,6 +17,8 @@ from pathlib import Path
 from models.utils import warp_back, calculate_luminance_mask
 import numpy
 
+import matplotlib.pyplot as plt
+
 # set seed for debugging
 tf.random.set_seed(1)
 numpy.random.seed(1)
@@ -78,7 +80,7 @@ def train_step(args, sample, style, reconet, vgg):
     unnorm = ReconetUnnorm()
 
     with tf.GradientTape() as tape:
-        tape.watch(reconet.trainable_weights)
+        tape.watch(reconet.variables)
 
         current_frame, previous_frame, flow, motion_boundaries = sample
         inverse_warp, reverse_motion_boundaries = warp_back(current_frame, flow)
@@ -89,6 +91,13 @@ def train_step(args, sample, style, reconet, vgg):
         current_frame_features, current_frame_output = reconet(norm(current_frame))
         previous_frame_features, previous_frame_output = reconet(norm(previous_frame))
 
+        print(current_frame_output.numpy()[1, :, :, :])
+        fig, ax = plt.subplots(2, 1)
+        ax[0].imshow(current_frame_output.numpy()[0, :, :, :])#.reshape(216, 512, 3))
+        ax[1].imshow(current_frame.numpy()[0, :, :, :])
+        plt.show()
+        print(current_frame_output)
+
         _, feature_width, feature_height, _ = current_frame_features.shape
         current_feature_flow = tf.image.resize(
             images=flow, size=(feature_width, feature_height)
@@ -97,13 +106,13 @@ def train_step(args, sample, style, reconet, vgg):
             current_frame_features, current_feature_flow
         )
 
-        with tape.stop_recording():
-            # Unonrmalize from reconet and apply VGG-specific norm
-            current_vgg_out = call_vgg(unnorm(current_frame_output), vgg)
-            previous_vgg_out = call_vgg(unnorm(previous_frame_output), vgg)
-            current_vgg_in = call_vgg(current_frame, vgg)
-            previous_vgg_in = call_vgg(previous_frame, vgg)
-            style_gram_matrices = [gram_matrix(x) for x in call_vgg(style, vgg)]
+        # with tape.stop_recording():
+        #     # Unonrmalize from reconet and apply VGG-specific norm
+        current_vgg_out = call_vgg(unnorm(current_frame_output), vgg)
+        previous_vgg_out = call_vgg(unnorm(previous_frame_output), vgg)
+        current_vgg_in = call_vgg(current_frame, vgg)
+        previous_vgg_in = call_vgg(previous_frame, vgg)
+        style_gram_matrices = [gram_matrix(x) for x in call_vgg(style, vgg)]
 
         losses = loss_fn(
             current_vgg_out=current_vgg_out,
@@ -126,13 +135,14 @@ def train_step(args, sample, style, reconet, vgg):
     # print(loss_fn)
 
     gradients = tape.gradient(loss, reconet.trainable_weights)
-    return (gradients, reconet.trainable_weights, losses)
+    return (gradients, reconet.variables, losses)
 
 
 def train_loop(args, train_data, optimizer, style, reconet, vgg) -> ReCoNet:
 
     epochs = 1 if args.debug else args.epochs
     loss_metric = ReCoNetLossMetric()
+    reconet.build(input_shape=(4, 512, 216, 3))
 
     for epoch in range(epochs):
         data_bar = tqdm(train_data)

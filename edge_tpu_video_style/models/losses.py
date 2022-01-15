@@ -10,7 +10,7 @@ from models.utils import warp_back, get_luminance_grayscale, calculate_luminance
 class ReCoNetLoss:
     """Write a class, they said. It'll be fun, they said"""
 
-    alpha: float
+    alpha: float 
     beta: float
     gamma: float
     lambda_f: float
@@ -169,10 +169,6 @@ def temporal_feature_loss(feat1_warp, feat2):
 
 def content_loss(content_feature_maps, style_feature_maps):
     b, w, h, c = content_feature_maps.shape
-    # w, h, c = content_feature_maps.shape
-    # return tf.reduce_sum(tf.square(content_feature_maps - style_feature_maps)) / (
-    #     c * w * h
-    # )
     return tf.reduce_mean(tf.square(content_feature_maps - style_feature_maps))
 
 
