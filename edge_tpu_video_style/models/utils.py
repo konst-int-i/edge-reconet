@@ -120,4 +120,4 @@ if __name__ == "__main__":
     warp, mask = warp_back(im, flow)
     lume = calculate_luminance_mask(im, im, mask)
 
-    print(f"{warp.shape=}, {mask.shape=}, {lume.shape=}")
+    print(f"warp.shape={warp.shape}, mask.shape={mask.shape}, lume.shape{lume.shape}")

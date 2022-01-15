@@ -110,11 +110,11 @@ class ReCoNetLoss:
         ]
 
     def __repr__(self):
-        loss_str = f"""{self._content_loss=}, 
-                       {self._style_loss=}, 
-                       {self._total_variation=}, 
-                       {self._feature_temporal_loss=},
-                       {self._output_temporal_loss=}"""
+        loss_str = f"""content_loss={self._content_loss}, 
+                       style_loss={self._style_loss}, 
+                       total_variation={self._total_variation}, 
+                       feature_temporal_loss={self._feature_temporal_loss},
+                       output_temporal_loss={self._output_temporal_loss}"""
         return loss_str
 
 
@@ -126,11 +126,11 @@ class ReCoNetLossMetric(tf.keras.metrics.Metric):
         self.reset_states()
 
     def result(self):
-        loss_str = f"""{self.content_loss=}, 
-                               {self.style_loss=}, 
-                               {self.total_variation=}, 
-                               {self.feature_temporal_loss=},
-                               {self.output_temporal_loss=}"""
+        loss_str = f"""content_loss={self.content_loss}, 
+                       style_loss={self.style_loss}, 
+                       total_variation={self.total_variation}, 
+                       feature_temporal_loss={self.feature_temporal_loss},
+                       output_temporal_loss={self.output_temporal_loss}"""
         print(loss_str)
         return [
             self.content_loss,
