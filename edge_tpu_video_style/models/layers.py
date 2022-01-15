@@ -90,7 +90,7 @@ class ConvInstReLU(ConvolutionalLayer):
 
     def call(self, x):
         x = super(ConvInstReLU, self).call(x)
-        x = self.inst(x)
+        # x = self.inst(x)
         x = self.relu(x)
         return x
 
@@ -104,10 +104,10 @@ class ResBlock(layers.Layer):
 
     def call(self, x):
         res = x
-        x = self.relu(self.inst(self.conv(x)))
-        # x = self.relu(self.conv(x))  # Added this
-        x = self.inst(self.conv(x))
-        # x = self.conv(x) # Added this
+        #x = self.relu(self.inst(self.conv(x)))
+        x = self.relu(self.conv(x))  # Added this
+        # x = self.inst(self.conv(x))
+        x = self.conv(x) # Added this
         x = res + x
         return x
 
