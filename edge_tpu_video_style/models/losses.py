@@ -218,13 +218,8 @@ def output_temporal_loss(
         previous_output_frame, reverse_optical_flow
     )
     # get rgb values from input_diff
-    red_coef = 0.2126
-    green_coef = 0.7152
-    blue_coef = 0.0722
     # luminance_input_diff = tf.expand_dims(get_luminance_grayscale(input_diff))
-    luminance_input_diff = get_luminance_grayscale(
-        input_diff, red_coef, green_coef, blue_coef
-    )
+    luminance_input_diff = get_luminance_grayscale(input_diff)
     luminance_input_diff = tf.expand_dims(luminance_input_diff, axis=3)
     b, w, h, c = current_input_frame.shape
     loss = tf.reduce_sum(
