@@ -13,20 +13,19 @@ style_path = tf.keras.utils.get_file('kandinsky5.jpg','https://storage.googleapi
 def feature_temporal_loss(
     current_feature_maps, previous_feature_maps, reverse_optical_flow, occlusion_mask
 ):
-    loss = 0
-    for feature_map, prev_fm in zip(current_feature_maps.values(), previous_feature_maps.values()):
-        b, w, h, c = feature_map.shape
-        #reverse_optical_flow_resized = tf.image.resize(
-        #    images=reverse_optical_flow, size=(w, h)
-        #)
-        #occlusion_mask_resized = tf.image.resize(images=occlusion_mask, size=(w, h))
-        warp_previous, warp_mask = warp_back(
-            prev_fm, reverse_optical_flow
-        )
-        feature_maps_diff = feature_map - warp_previous
-        loss += tf.reduce_sum(
-            tf.square(occlusion_mask* feature_maps_diff * warp_mask)
-        ) / (c * h * w)
+    # for feature_map, prev_fm in zip(current_feature_maps, previous_feature_maps.values()):
+    b, w, h, c = current_feature_maps.shape
+    #reverse_optical_flow_resized = tf.image.resize(
+    #    images=reverse_optical_flow, size=(w, h)
+    #)
+    #occlusion_mask_resized = tf.image.resize(images=occlusion_mask, size=(w, h))
+    warp_previous, warp_mask = warp_back(
+        previous_feature_maps, reverse_optical_flow
+    )
+    feature_maps_diff = current_feature_maps - warp_previous
+    loss = tf.reduce_sum(
+        tf.square(occlusion_mask* feature_maps_diff * warp_mask)
+    ) / (c * h * w)
     return loss
 
 
@@ -42,11 +41,12 @@ def warp_back(image: tf.Tensor, flow: tf.Tensor):
         tf.Tensor: The inversely-flowed tensor calculated through bilinear
         interpolation
     """
-    batch_size, height, width, channels = image.shape
+    batch_size, width, height, channels = image.shape
 
     # The flow is defined on the image grid. Turn the flow into a list of query
     # points in the grid space.
-    grid_x, grid_y = tf.meshgrid(tf.range(width), tf.range(height))
+    grid_x, grid_y = tf.meshgrid(tf.range(height), tf.range(width))
+    print(f"{flow=}")
     stacked_grid = tf.cast(tf.stack([grid_y, grid_x], axis=2), flow.dtype)
     batched_grid = tf.expand_dims(stacked_grid, axis=0)
     query_points_on_grid = batched_grid + flow
@@ -318,7 +318,7 @@ def style_content_loss(outputs):
                              for name in content_outputs.keys()])
     content_loss *= content_weight / num_content_layers
     loss = style_loss + content_loss
-    return loss, outputs['style']
+    return loss
 
 
 def high_pass_x_y(image):
@@ -475,22 +475,22 @@ train_dataset = train_dataset.batch(args.batch_size)
 
 @tf.function()
 def train_step(image, previous_img, flow, mask):
-  reverse_optical_flow = warp_back(image, flow)
+  reverse_optical_flow, mask = warp_back(image, flow)
   with tf.GradientTape() as tape:
-    output_frame = reconet(image)
-    previous_output_frame = reconet(previous_img)
+    output_frame, features = reconet(image)
+    previous_output_frame, previous_features = reconet(previous_img)
     outputs = extractor(image)
     previous_outputs = extractor(previous_img)
-    loss, feature_maps = style_content_loss(outputs)
-    pscl, prev_feature_maps = style_content_loss(previous_outputs)
+    loss = style_content_loss(outputs)
+    pscl = style_content_loss(previous_outputs)
     loss += pscl
     loss += total_variation_weight*tf.image.total_variation(image)
-    loss += feature_temporal_loss(feature_maps, prev_feature_maps, reverse_optical_flow, mask)
+    loss += feature_temporal_loss(features, previous_features, reverse_optical_flow, mask)
     loss += output_temporal_loss(image, previous_img, output_frame, previous_output_frame, reverse_optical_flow, occlusion_mask)
   grad = tape.gradient(loss, image)
   opt.apply_gradients([(grad, image)])
   image.assign(clip_0_1(image))
-  return outputs
+  return output_frame
 
 for sample in train_dataset:
     current_img, prev_img, flow, mask = sample
@@ -502,6 +502,7 @@ for sample in train_dataset:
     plt.show()
     for _ in range(10):
         out = train_step(img, previous_img, flow, mask)
+        print(out)
         plt.imshow(out[0,:,:,:])
         plt.show()
     plt.imshow(img[0,:,:,:])
