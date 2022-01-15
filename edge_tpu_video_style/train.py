@@ -122,7 +122,7 @@ def train_step(args, sample, style, reconet, vgg):
         # combine loss elements
         loss = sum(losses)
 
-    print(f"{loss=}")
+    print(f"loss={loss}")
     # print(loss_fn)
 
     gradients = tape.gradient(loss, reconet.trainable_weights)
