@@ -25,15 +25,16 @@ def my_init(shape, dtype=None):
 class BootlegInstanceNorm(layers.Layer):
     def __init__(self, out_channels, input_size):
         super().__init__()
+        kernel_size = (input_size[0] // 2, input_size[1] // 2)
         self.conv = layers.Conv2D(
-            out_channels, kernel_size=input_size, strides=1, use_bias=False, padding="valid",
+            out_channels, kernel_size=kernel_size, strides=1, use_bias=False, padding="same",
             trainable=False, kernel_initializer=bootleg_init
         )
         self.trainable = False
 
     def call(self, x):
         norm = self.conv(x)
-        return x - norm
+        return activations.sigmoid(x - norm)
 
 
 # class InstanceNorm(layers.Layer):
