@@ -111,7 +111,9 @@ def train_step(args, sample, style, reconet, vgg):
         current_vgg_out = call_vgg(unnorm(current_frame_output), vgg)
         previous_vgg_out = call_vgg(unnorm(previous_frame_output), vgg)
         current_vgg_in = call_vgg(current_frame, vgg)
+        print("HERE", current_vgg_in[2].shape, tf.reduce_mean(current_vgg_in[2]))
         previous_vgg_in = call_vgg(previous_frame, vgg)
+        print("HERE", previous_vgg_in[2].shape, tf.reduce_mean(previous_vgg_in[2]))
         style_gram_matrices = [gram_matrix(x) for x in call_vgg(style, vgg)]
 
         losses = loss_fn(
@@ -179,6 +181,9 @@ def main():
     optimizer = optimizers.Adamax(learning_rate=args.lr)
     # read & process style image
     style_img = read_style_image(args)
+    plt.imshow(style_img[0,:,:,:])
+    plt.show()
+    print(style_img)
 
     reconet = ReCoNet()
     vgg = vgg_layers()
