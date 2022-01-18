@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-def quantise_model(model, model_name):
+def quantise_model(model_name):
     saved_model_dir = "saved_models/" + model_name
     converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
@@ -18,5 +18,5 @@ def quantise_model(model, model_name):
 
 def representative_dataset():
     for _ in range(100):
-        data = tf.random.uniform((1, 32, 32, 3), minval=0, maxval=1)
+        data = tf.random.uniform((1, 512, 216, 3), minval=0, maxval=1)
         yield [data]

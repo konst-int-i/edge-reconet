@@ -4,20 +4,44 @@ from tensorflow.keras import activations
 import tensorflow_addons as tfa
 
 
-class InstanceNorm(layers.Layer):
-    def __init__(self):
-        super().__init__()
+def bootleg_init(shape, dtype=None):
+    init = tf.ones(shape, dtype=dtype)
+    init /= shape[0] * shape[1]
+    return init
 
-    def __call__(self, x):
-        mean = tf.math.reduce_mean(x, axis=(1, 2), keepdims=True)
-        recip_stdev = tf.math.rsqrt(
-            tf.math.reduce_sum(
-                tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True
-            )
-            / (216 * 512)
+
+class BootlegInstanceNorm(layers.Layer):
+    def __init__(self, out_channels):
+        super().__init__()
+        kernel_size = (30, 30)
+        self.conv = layers.Conv2D(
+            out_channels,
+            kernel_size=kernel_size,
+            strides=1,
+            use_bias=False,
+            padding="same",
+            trainable=False,
+            kernel_initializer=bootleg_init,
         )
-        normed = tf.multiply(tf.math.subtract(x, mean), recip_stdev)
-        return normed
+        self.trainable = False
+
+    def call(self, x):
+        norm = self.conv(x)
+        return activations.sigmoid(x - norm)
+
+
+# class InstanceNorm(layers.Layer):
+#     def __init__(self):
+#         super().__init__()
+#
+#     def call(self, x):
+#         mean = tf.math.reduce_mean(x, axis=(1, 2), keepdims=True)
+#         recip_stdev = tf.math.rsqrt(
+#             tf.math.reduce_sum(tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True)
+#             / (216 * 512)
+#         )
+#         normed = tf.multiply(tf.math.subtract(x, mean), recip_stdev)
+#         return normed
 
 
 class Normalization(layers.Layer):
@@ -26,7 +50,7 @@ class Normalization(layers.Layer):
         self.mean = tf.reshape(mean, (1, 1, -1))
         self.std = tf.reshape(std, (1, 1, -1))
 
-    def __call__(self, img):
+    def call(self, img):
         return (img - self.mean) / self.std
 
 
@@ -34,7 +58,7 @@ class ReconetNorm(layers.Layer):
     def __init__(self):
         super(ReconetNorm, self).__init__()
 
-    def __call__(self, img):
+    def call(self, img):
         return (img * 2) - 1
 
 
@@ -42,7 +66,7 @@ class ReconetUnnorm(layers.Layer):
     def __init__(self):
         super(ReconetUnnorm, self).__init__()
 
-    def __call__(self, img):
+    def call(self, img):
         return (img + 1) / 2
 
 
@@ -53,7 +77,7 @@ class ConvolutionalLayer(layers.Layer):
             out_channels, kernel_size, strides=stride, use_bias=bias, padding="same"
         )
 
-    def __call__(self, x):
+    def call(self, x):
         x = self.conv(x)
         return x
 
@@ -61,13 +85,12 @@ class ConvolutionalLayer(layers.Layer):
 class ConvInstReLU(ConvolutionalLayer):
     def __init__(self, out_channels, kernel_size, stride):
         super(ConvInstReLU, self).__init__(out_channels, kernel_size, stride)
-        self.inst = InstanceNorm()
-        # self.inst = tfa.layers.InstanceNormalization()
+        self.inst = BootlegInstanceNorm(out_channels)
         self.relu = activations.relu
 
-    def __call__(self, x):
-        x = super(ConvInstReLU, self).__call__(x)
-        x = self.inst(x)
+    def call(self, x):
+        x = super(ConvInstReLU, self).call(x)
+        # x = self.inst(x)
         x = self.relu(x)
         return x
 
@@ -76,17 +99,29 @@ class ResBlock(layers.Layer):
     def __init__(self, filters, kernel_size=3, stride=1, padding=1):
         super(ResBlock, self).__init__()
         self.conv = layers.Conv2D(filters, kernel_size, stride, padding="same")
-        self.inst = InstanceNorm()
-        # self.inst = tfa.layers.InstanceNormalization()
-
+        self.inst = BootlegInstanceNorm(filters)
         self.relu = activations.relu
 
-    def __call__(self, x):
+    def call(self, x):
         res = x
-        x = self.relu(self.inst(self.conv(x)))
-        x = self.inst(self.conv(x))
+        #x = self.relu(self.inst(self.conv(x)))
+        x = self.relu(self.conv(x))  # Added this
+        # x = self.inst(self.conv(x))
+        x = self.conv(x) # Added this
         x = res + x
         return x
+
+
+class MinMaxPort(layers.Layer):
+    def __init__(self):
+        super().__init__()
+
+    def call(self, x):
+        minimum = tf.math.reduce_min(x, axis=(1, 2), keepdims=True)
+        maximum = tf.math.reduce_max(x, axis=(1, 2), keepdims=True)
+        X_std = (x - minimum) / (maximum - minimum)
+        X_scaled = X_std * (maximum - minimum) + minimum
+        return X_scaled
 
 
 class ReCoNet(tf.keras.Model):
@@ -121,7 +156,7 @@ class ReCoNet(tf.keras.Model):
         x = self.upsample(x)
         x = self.conv_inst_relu_dev2(x)
         x = self.activation_conv(x)
-        image_output = self.tanh(x)
+        image_output = activations.relu(x)
 
         return feat_map, image_output
 

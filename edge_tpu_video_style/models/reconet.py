@@ -1,14 +1,6 @@
 import tensorflow as tf
-from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras import activations
-
-from timeit import default_timer as timer
-
-from models.utils import save_model
-from postprocessing.quantisation import quantise_model
-
-from models.layers import ReCoNet
 
 
 def resblock(x, kernelsize, filters):
