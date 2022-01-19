@@ -41,7 +41,7 @@ def run_inference(image, model):
     image = postprocess_normal(image)
     return image
 
-def show_webcam(model, mirror=False, input_location='/dev/video2',
+def show_webcam(model, mirror=False, input_location='/dev/video0',
         output_size=(512, 216), output_location='display', mode='normal'):
 
     cam = cv2.VideoCapture(input_location)
