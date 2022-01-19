@@ -134,7 +134,7 @@ dmypy.json
 
 # Tensorflow
 *.tflite
-saved_models/*
+saved_models/
 
 # VIM
 *.swp
@@ -143,3 +143,4 @@ saved_models/*
 .DS_Store
 
 edge/
+*.pt
