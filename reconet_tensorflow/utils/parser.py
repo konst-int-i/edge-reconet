@@ -1,4 +1,5 @@
 import argparse
+from typing import *
 
 parser = argparse.ArgumentParser(description="Style Transfer")
 parser.add_argument(
@@ -57,3 +58,16 @@ parser.add_argument(
     help="Folder name in `saved_models/` folder",
 )
 parser.add_argument("--debug", type=bool, default=False, help="Running in debug mode")
+
+parser.add_argument(
+    "--video-input", default=0, help="Filepath to video file to apply style transfer"
+)
+parser.add_argument(
+    "--video-output",
+    type=str,
+    default="display",
+    help="Filepath to video file to apply style transfer",
+)
+parser.add_argument(
+    "--resolution", type=tuple, default=(640, 480), help="Aspect ratio of video input"
+)

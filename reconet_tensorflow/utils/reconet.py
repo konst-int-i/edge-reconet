@@ -36,9 +36,9 @@ def build_reconet() -> tf.keras.Model:
 
     features = x
 
-    x = tf.keras.layers.UpSampling2D(interpolation='bilinear')(x)
+    x = tf.keras.layers.UpSampling2D(interpolation="bilinear")(x)
     x = conv_instnorm_relu(x, 64, 3, padding="same")
-    x = tf.keras.layers.UpSampling2D(interpolation='bilinear')(x)
+    x = tf.keras.layers.UpSampling2D(interpolation="bilinear")(x)
     x = conv_instnorm_relu(x, 32, 3, padding="same")
     out = layers.Conv2D(3, kernel_size=9, padding="same", activation="tanh")(x)
     return tf.keras.Model(inputs=encoder_input, outputs=[features, out])

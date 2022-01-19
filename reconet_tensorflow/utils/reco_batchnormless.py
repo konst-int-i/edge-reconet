@@ -1,4 +1,3 @@
-
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras import activations
@@ -20,7 +19,6 @@ def conv_layer(x, filters, kernel_size, padding="same", strides=(1, 1)):
     return x
 
 
-
 def build_reconet() -> tf.keras.Model:
     # encoder_input = inputs['encoder_input']
     encoder_input = layers.Input(shape=(216, 512, 3), name="original_img")
@@ -36,9 +34,9 @@ def build_reconet() -> tf.keras.Model:
 
     features = x
 
-    x = tf.keras.layers.UpSampling2D(interpolation='bilinear')(x)
+    x = tf.keras.layers.UpSampling2D(interpolation="bilinear")(x)
     x = conv_layer(x, 64, 3, padding="same")
-    x = tf.keras.layers.UpSampling2D(interpolation='bilinear')(x)
+    x = tf.keras.layers.UpSampling2D(interpolation="bilinear")(x)
     x = conv_layer(x, 32, 3, padding="same")
     out = layers.Conv2D(3, kernel_size=9, padding="same", activation="tanh")(x)
     return tf.keras.Model(inputs=encoder_input, outputs=[features, out])

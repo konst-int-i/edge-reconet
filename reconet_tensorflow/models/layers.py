@@ -11,7 +11,9 @@ class InstanceNorm(layers.Layer):
     def call(self, x):
         mean = tf.math.reduce_mean(x, axis=(1, 2), keepdims=True)
         recip_stdev = tf.math.rsqrt(
-            tf.math.reduce_sum(tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True)
+            tf.math.reduce_sum(
+                tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True
+            )
             / (216 * 512)
         )
         normed = tf.multiply(tf.math.subtract(x, mean), recip_stdev)

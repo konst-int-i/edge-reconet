@@ -38,7 +38,7 @@ def instance_normalisation(x):
 
 
 def build_reconet(inputs) -> tf.keras.Model:
-    encoder_input = inputs['encoder_input']
+    encoder_input = inputs["encoder_input"]
     # encoder_input = keras.Input(shape=(32, 32, 3), name="original_img")
     x = conv_instnorm_relu(encoder_input, 32, 9)
     x = layers.Conv2D(64, 3, padding="same", strides=(1, 1), activation="relu")(x)
