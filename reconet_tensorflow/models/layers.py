@@ -10,41 +10,41 @@ def bootleg_init(shape, dtype=None):
     return init
 
 
-class BootlegInstanceNorm(layers.Layer):
-    def __init__(self, out_channels):
-        super().__init__()
-        kernel_size = (30, 30)
-        self.conv = layers.Conv2D(
-            out_channels,
-            kernel_size=kernel_size,
-            strides=1,
-            use_bias=False,
-            padding="same",
-            trainable=False,
-            kernel_initializer=bootleg_init,
-        )
-        self.trainable = False
+# class BootlegInstanceNorm(layers.Layer):
+#     def __init__(self, out_channels):
+#         super().__init__()
+#         kernel_size = (30, 30)
+#         self.conv = layers.Conv2D(
+#             out_channels,
+#             kernel_size=kernel_size,
+#             strides=1,
+#             use_bias=False,
+#             padding="same",
+#             trainable=False,
+#             kernel_initializer=bootleg_init,
+#         )
+#         self.trainable = False
+#
+#     def call(self, x):
+#         mean = tf.math.reduce_mean(x, axis=(1, 2), keepdims=True)
+#         recip_stdev = tf.math.rsqrt(
+#             tf.math.reduce_sum(tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True)
+#             / (216 * 512)
+#         )
+#         normed = tf.multiply(tf.math.subtract(x, mean), recip_stdev)
+#         return normed
 
-    def call(self, x):
-        mean = tf.math.reduce_mean(x, axis=(1, 2), keepdims=True)
-        recip_stdev = tf.math.rsqrt(
-            tf.math.reduce_sum(tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True)
-            / (216 * 512)
-        )
-        normed = tf.multiply(tf.math.subtract(x, mean), recip_stdev)
-        return normed
-
- class InstanceNorm(layers.Layer):
-    def __init__(self):
-        super().__init__()
-
-    def call(self, x):
-        mean = tf.math.reduce_mean(x, axis=(1, 2), keepdims=True)
-        recip_stdev = tf.math.rsqrt(
-            tf.math.reduce_sum(tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True)
-            / (216 * 512)
-        )
-        normed = tf.multiply(tf.math.subtract(x, mean), recip_stdev)
+ # class InstanceNorm(layers.Layer):
+ #    def __init__(self):
+ #        super().__init__()
+ #
+ #    def call(self, x):
+ #        mean = tf.math.reduce_mean(x, axis=(1, 2), keepdims=True)
+ #        recip_stdev = tf.math.rsqrt(
+ #            tf.math.reduce_sum(tf.math.square(tf.math.subtract(x, mean)), axis=(1, 2), keepdims=True)
+ #            / (216 * 512)
+ #        )
+ #        normed = tf.multiply(tf.math.subtract(x, mean), recip_stdev)
 
 
 
@@ -89,8 +89,8 @@ class ConvolutionalLayer(layers.Layer):
 class ConvInstReLU(ConvolutionalLayer):
     def __init__(self, out_channels, kernel_size, stride):
         super(ConvInstReLU, self).__init__(out_channels, kernel_size, stride)
-        self.inst = InstanceNorm()
-        # self.inst = tfa.layers.InstanceNormalization()
+        # self.inst = InstanceNorm()
+        self.inst = tfa.layers.InstanceNormalization()
         self.relu = activations.relu
 
     def call(self, x):
@@ -104,8 +104,8 @@ class ResBlock(layers.Layer):
     def __init__(self, filters, kernel_size=3, stride=1, padding=1):
         super(ResBlock, self).__init__()
         self.conv = layers.Conv2D(filters, kernel_size, stride, padding="same")
-        self.inst = InstanceNorm()
-        # self.inst = tfa.layers.InstanceNormalization()
+        # self.inst = InstanceNorm()
+        self.inst = tfa.layers.InstanceNormalization()
 
         self.relu = activations.relu
 
