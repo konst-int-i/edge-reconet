@@ -1,8 +1,3 @@
-"""
-Simply display the contents of the webcam with optional mirroring using OpenCV 
-via the new Pythonic cv2 interface.  Press <esc> to quit.
-"""
-
 import cv2
 import tensorflow as tf
 import numpy as np
@@ -81,7 +76,7 @@ def show_webcam(model, mirror=False, input_location='/dev/video0',
 
 def main():
     model = tf.keras.models.load_model('saved_models/reconet_tf_in.pb')
-    show_webcam(mirror=True, input_location='/dev/video0', output_location='display',
+    show_webcam(mirror=True, input_location=0,
             model=model, mode='normal', output_size=(1080, 760))
 
 
