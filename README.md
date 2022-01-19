@@ -58,10 +58,8 @@ python3 reconet_tensorflow/video_demo.py
 python3 reconet_tensorflow/video_demo.py --video-input sample_vid.mp4 --video-output styled_video.mp4
 ```
 
-You can also specify the input resolution using 
+You can also specify the input/output resolution using (here 512x216 for input, 1080x760 for output)
 
 ```
-python3 reconet_tensorflow/video_demo.py --video-input sample_vid.mp4 --video-output styled_video.mp4 --resolution (640, 480)
+python3 reconet_tensorflow/video_demo.py --input-resolution 512, 360 --output-resolution 1080, 760
 ```
-
-

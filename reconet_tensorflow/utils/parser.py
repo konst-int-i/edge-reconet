@@ -69,5 +69,17 @@ parser.add_argument(
     help="Filepath to video file to apply style transfer",
 )
 parser.add_argument(
-    "--resolution", type=tuple, default=(640, 480), help="Aspect ratio of video input"
+    "--input-resolution",
+    type=int,
+    default=(640, 480),
+    nargs=2,
+    help="Aspect ratio of video input, runs faster at lower resolution",
+)
+
+parser.add_argument(
+    "--output-resolution",
+    type=int,
+    default=(1080, 760),
+    nargs=2,
+    help="Aspect ratio of video output",
 )

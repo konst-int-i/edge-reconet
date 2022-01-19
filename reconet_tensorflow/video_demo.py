@@ -96,10 +96,10 @@ def main():
     show_webcam(
         mirror=True,
         input_location=args.video_input,
-        resolution=args.resolution,
+        resolution=args.input_resolution,
         model=model,
         mode="normal",
-        output_size=(1080, 760),
+        output_size=args.output_resolution,
         output_location=args.video_output,
     )
 
