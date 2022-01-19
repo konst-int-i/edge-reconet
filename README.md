@@ -63,3 +63,8 @@ You can also specify the input/output resolution using (here 512x216 for input, 
 ```
 python3 reconet_tensorflow/video_demo.py --input-resolution 512, 360 --output-resolution 1080, 760
 ```
+
+
+#### Sample demo
+
+![Alt Text](kings_parade.gif)
