@@ -39,7 +39,7 @@ parser.add_argument(
 parser.add_argument(
     "--style-name",
     type=str,
-    default="data/style_images/flower.jpeg",
+    default="data/style_images/scream.jpeg",
     help="style image name",
 )
 parser.add_argument(

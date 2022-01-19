@@ -5,11 +5,6 @@ import tensorflow_addons as tfa
 from typing import Tuple
 
 
-def save_model(quantised, name="style_transfer.tflite"):
-    with open(f"saved_models/{name}", "wb") as f:
-        f.write(quantised)
-
-
 def warp_back(image: tf.Tensor, flow: tf.Tensor) -> Tuple[tf.Tensor]:
     """Calculates the inverse warping from frame t to frame t - 1
     TODO: Test this method!
@@ -120,4 +115,4 @@ if __name__ == "__main__":
     warp, mask = warp_back(im, flow)
     lume = calculate_luminance_mask(im, im, mask)
 
-    print(f"{warp.shape=}, {mask.shape=}, {lume.shape=}")
+    print(f"warp.shape={warp.shape}, mask.shape={mask.shape}, lume.shape{lume.shape}")

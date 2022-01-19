@@ -136,13 +136,13 @@ def train_loop(args, train_data, optimizer, style, reconet, vgg) -> ReCoNet:
 
     for epoch in range(epochs):
         data_bar = tqdm(train_data)
-        for id, sample in enumerate(data_bar):
+        for id, batch in enumerate(data_bar):
             if args.debug and id == 2:
                 break
-            print(f"Epoch {epoch+1}/{epochs} ; Sample {id+1}")
+            print(f"Epoch {epoch+1}/{epochs} ; Batch {id+1}")
 
             gradients, reconet_vars, losses = train_step(
-                vars(args), sample, style, reconet, vgg
+                vars(args), batch, style, reconet, vgg
             )
             optimizer.apply_gradients(zip(gradients, reconet_vars))
 
